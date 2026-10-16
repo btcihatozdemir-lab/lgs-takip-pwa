@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import ilIlceListesi from '../assets/il_ilce_sade.json'
 import GoogleButon from '../components/GoogleButon.vue'
 import { supabase } from '../supabase'
@@ -16,6 +16,7 @@ import {
 } from '../services/kayit'
 
 const router = useRouter()
+const route = useRoute()
 
 const sekme = ref('ogrenci')
 const katilim = ref('davet')
@@ -85,7 +86,16 @@ function googleBilgisiDoldur(kullanici) {
   if (!soyad.value && parcalar.length > 1) soyad.value = parcalar.slice(1).join(' ')
 }
 
+const davetBaglantisiyla = ref(false)
+
 onMounted(async () => {
+  const davet = typeof route.query.davet === 'string' ? route.query.davet.trim() : ''
+  if (davet) {
+    sekme.value = 'ogrenci'
+    katilim.value = 'davet'
+    davetKodu.value = davet.toUpperCase()
+    davetBaglantisiyla.value = true
+  }
   const { data: { session } } = await supabase.auth.getSession()
   if (session?.user) googleBilgisiDoldur(session.user)
 })
@@ -352,7 +362,8 @@ async function kaydet() {
 
           <label v-if="katilim === 'davet'" class="block text-sm text-slate-700">
             Davet kodu
-            <input v-model="davetKodu" required placeholder="BEY-4F2A" class="uppercase" :class="alanSinifi" />
+            <input v-model="davetKodu" required placeholder="BEY-4F2A" class="uppercase" :readonly="davetBaglantisiyla" :class="alanSinifi" />
+            <span v-if="davetBaglantisiyla" class="mt-1 block text-xs text-slate-500">Davet bağlantısı kodu getirdi.</span>
           </label>
 
           <template v-else>

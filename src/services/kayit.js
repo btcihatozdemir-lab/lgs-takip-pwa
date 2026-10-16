@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { rumuzKontrol } from './calisma'
 import { FormTemizlemeHatasi, hataMetni } from './hata'
 import { sifreDenetle } from './sifre'
 
@@ -161,16 +162,20 @@ export async function ogretmenKaydiOlustur({ ad, soyad, eposta, sifre, brans, il
 }
 
 export async function ogrenciKaydiOlustur({ ad, soyad, eposta, sifre, rumuz, sinif, okulId, danismanId, onayDurumu, kullaniciId }) {
+  const tekilRumuz = await rumuzKontrol(rumuz)
   const kullanici = await kullaniciyiHazirla({ kullaniciId, eposta: eposta.trim(), sifre, rol: 'ogrenci' })
   const { error } = await supabase.from('ogrenciler').insert({
     id: kullanici.id,
     okul_id: okulId,
     danisman_id: danismanId,
     ad_soyad: `${ad.trim()} ${soyad.trim()}`,
-    rumuz: rumuz.trim(),
+    rumuz: tekilRumuz,
     sinif: String(sinif),
     onay_durumu: onayDurumu,
   })
 
+  if (error && /rumuz/i.test(`${error.message || ''} ${error.details || ''}`)) {
+    throw new Error('Bu rumuz kullanılıyor. Başka bir rumuz seç.')
+  }
   if (error) hataFirlat(error, 'Öğrenci kaydı oluşturulamadı.')
 }
