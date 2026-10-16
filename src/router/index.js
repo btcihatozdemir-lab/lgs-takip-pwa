@@ -25,6 +25,20 @@ const router = createRouter({
   routes,
 })
 
+const modulYenile = 'lgs-modul-yenile'
+
+router.onError((hata) => {
+  const mesaj = String(hata?.message || hata)
+  if (!/dynamically imported module|module script failed/i.test(mesaj)) return
+  if (sessionStorage.getItem(modulYenile)) return
+  sessionStorage.setItem(modulYenile, '1')
+  window.location.reload()
+})
+
+router.afterEach(() => {
+  sessionStorage.removeItem(modulYenile)
+})
+
 function panelYolu(profil) {
   return profil.tur === 'ogretmen' ? '/ogretmen' : '/ogrenci'
 }

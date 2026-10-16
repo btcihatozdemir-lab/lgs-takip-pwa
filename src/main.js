@@ -1,8 +1,11 @@
 import { createApp } from 'vue'
+import { registerSW } from 'virtual:pwa-register'
 import './style.css'
 import App from './App.vue'
 import router from './router'
 import { hataBildir } from './services/hata'
+
+registerSW({ immediate: true })
 
 const uygulama = createApp(App)
 
