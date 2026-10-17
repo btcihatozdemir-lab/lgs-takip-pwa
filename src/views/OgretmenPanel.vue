@@ -11,7 +11,6 @@ import { istanbulGunu, raporHazirla, tarihEkle } from '../../supabase/functions/
 import {
   aralikKayitlari,
   bolgeOzet,
-  danismaniBul,
   dersOzet,
   kayitTarihleri,
   liderlik,
@@ -39,7 +38,6 @@ const seciliIl = ref('')
 const seciliIlce = ref('')
 const okulAdi = ref('')
 const okulFormuHazir = ref(false)
-const baglamaKodu = ref('')
 const seciliOgrenci = ref('')
 const sonGunler = ref(new Map())
 const gecenKayitlar = ref([])
@@ -189,23 +187,20 @@ async function kendimeBagla(ogrenci) {
     await ogrenciBilgisiGuncelle(ogrenci.id, { danisman_id: kart.value.id, onay_durumu: true })
     await yukle()
     toast.basari(`${ogrenci.ad_soyad} sana bağlandı.`)
+    return true
   } catch (hata) {
     toast.hata(hata.message || 'Öğrenci bağlanamadı.')
+    return false
   }
 }
 
-async function kodlaBagla() {
-  try {
-    const ogretmen = await danismaniBul(baglamaKodu.value)
-    if (!ogretmen) throw new Error('Öğretmen kodu bulunamadı.')
-    if (!seciliOgrenci.value) throw new Error('Önce öğrenciyi seç.')
-    await ogrenciBilgisiGuncelle(seciliOgrenci.value, { danisman_id: ogretmen.id })
-    baglamaKodu.value = ''
-    await yukle()
-    toast.basari('Danışman atandı. Bir öğrencinin tek danışmanı olur.')
-  } catch (hata) {
-    toast.hata(hata.message || 'Danışman atanamadı.')
+async function secileniBagla() {
+  const ogrenci = danismansizlar.value.find((kayit) => kayit.id === seciliOgrenci.value)
+  if (!ogrenci) {
+    toast.hata('Önce öğrenciyi seç.')
+    return
   }
+  if (await kendimeBagla(ogrenci)) seciliOgrenci.value = ''
 }
 
 async function bilgileriKaydet() {
@@ -344,13 +339,12 @@ onMounted(async () => {
                 <button type="button" class="ikincil" @click="kendimeBagla(ogrenci)">Bana bağla</button>
               </article>
               <p v-if="!danismansizlar.length" class="bos">Danışmansız öğrenci yok.</p>
-              <form class="ekle-satir" @submit.prevent="kodlaBagla">
+              <form v-if="danismansizlar.length" class="ekle-satir" @submit.prevent="secileniBagla">
                 <select v-model="seciliOgrenci" class="yazi-alani">
                   <option value="">Öğrenci seç</option>
                   <option v-for="ogrenci in danismansizlar" :key="ogrenci.id" :value="ogrenci.id">{{ ogrenci.ad_soyad }}</option>
                 </select>
-                <input v-model="baglamaKodu" placeholder="Kod" aria-label="Öğretmen kodu" class="yazi-alani kod-alani" />
-                <button type="submit" class="kucuk-dugme">Ata</button>
+                <button type="submit" class="kucuk-dugme">Bana bağla</button>
               </form>
             </div>
           </template>
