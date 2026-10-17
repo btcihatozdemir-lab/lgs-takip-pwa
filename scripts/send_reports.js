@@ -114,16 +114,27 @@ async function calistir() {
     auth: { persistSession: false },
   })
   const hafta = gecenHafta()
+  const yalnizEposta = (process.env.TEST_OGRENCI_EPOSTA || '').trim().toLowerCase()
   console.log(`Hafta: ${hafta.baslangic} – ${hafta.bitis}`)
 
-  const { data: ogrenciler, error: ogrenciHatasi } = await supabase
+  const { data: tumOgrenciler, error: ogrenciHatasi } = await supabase
     .from('ogrenciler')
     .select('id, ad_soyad, danisman_id')
     .eq('onay_durumu', true)
-    .not('danisman_id', 'is', null)
   if (ogrenciHatasi) throw new Error(`Öğrenciler okunamadı: ${ogrenciHatasi.message}`)
+  let ogrenciler = tumOgrenciler ?? []
+  if (yalnizEposta) {
+    const dar = []
+    for (const ogrenci of ogrenciler) {
+      const { data: hesap, error: hesapHatasi } = await supabase.auth.admin.getUserById(ogrenci.id)
+      if (hesapHatasi) throw new Error(hesapHatasi.message)
+      if ((hesap.user?.email || '').toLowerCase() === yalnizEposta) dar.push(ogrenci)
+    }
+    ogrenciler = dar
+    console.log(`Test öğrencisi: ${yalnizEposta} (${ogrenciler.length})`)
+  }
   if (!ogrenciler?.length) {
-    console.log('Onaylı ve danışmanı olan öğrenci yok.')
+    console.log('Onaylı öğrenci yok.')
     return
   }
 
@@ -135,11 +146,33 @@ async function calistir() {
     .lte('tarih', hafta.bitis)
   if (kayitHatasi) throw new Error(`Günlük kayıtlar okunamadı: ${kayitHatasi.message}`)
 
+  const { data: alicilar, error: aliciHatasi } = await supabase
+    .from('cetel_alicilar')
+    .select('ogrenci_id, ogretmen_id')
+    .in('ogrenci_id', ogrenciler.map((ogrenci) => ogrenci.id))
+  if (aliciHatasi) throw new Error(`Posta alıcıları okunamadı: ${aliciHatasi.message}`)
+
+  const secilenler = new Map()
+  for (const alici of alicilar ?? []) {
+    const liste = secilenler.get(alici.ogrenci_id) ?? []
+    liste.push(alici.ogretmen_id)
+    secilenler.set(alici.ogrenci_id, liste)
+  }
+
   const gruplar = new Map()
+  function ogrenciEkle(ogretmenId, ogrenci) {
+    if (!ogretmenId) return
+    const liste = gruplar.get(ogretmenId) ?? []
+    if (!liste.some((kisi) => kisi.id === ogrenci.id)) liste.push(ogrenci)
+    gruplar.set(ogretmenId, liste)
+  }
   for (const ogrenci of ogrenciler) {
-    const liste = gruplar.get(ogrenci.danisman_id) ?? []
-    liste.push(ogrenci)
-    gruplar.set(ogrenci.danisman_id, liste)
+    ogrenciEkle(ogrenci.danisman_id, ogrenci)
+    for (const ogretmenId of secilenler.get(ogrenci.id) ?? []) ogrenciEkle(ogretmenId, ogrenci)
+  }
+  if (!gruplar.size) {
+    console.log('Posta alacak öğretmen yok.')
+    return
   }
 
   const yazitipleri = await yazitipleriYukle()
@@ -186,7 +219,7 @@ async function calistir() {
       await tasima.sendMail({
         from: `"LGS Takip" <${process.env.SMTP_USER}>`,
         to: posta,
-        subject: `Haftalık çizelge · ${hafta.baslangic} – ${hafta.bitis}`,
+        subject: `${yalnizEposta ? 'Deneme · ' : ''}Haftalık çizelge · ${hafta.baslangic} – ${hafta.bitis}`,
         html: htmlRapor(ogretmen.ad_soyad, raporlar, hafta),
         attachments: await cetvelEkleri(raporlar, yazitipleri, hafta),
       })
