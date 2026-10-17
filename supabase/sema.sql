@@ -216,9 +216,11 @@ language sql stable security definer set search_path = public as $$
   from ogr o
   left join lateral (
     select coalesce(sum(gun_soru(g)), 0) soru, coalesce(sum(gun_net(g)), 0) net,
-      (select count(*) from kitaplar b where b.ogrenci_id = o.id and b.bitti_tarihi >= date_trunc('month', current_date)::date) kitap
+      (select count(*) from kitaplar b where b.ogrenci_id = o.id and b.bitti_tarihi >= (timezone('Europe/Istanbul', now()))::date - (extract(isodow from timezone('Europe/Istanbul', now()))::int - 1)) kitap
     from gunluk_kayitlar g
-    where g.ogrenci_id = o.id and g.tarih >= date_trunc('month', current_date)::date
+    where g.ogrenci_id = o.id
+      and g.tarih >= (timezone('Europe/Istanbul', now()))::date - (extract(isodow from timezone('Europe/Istanbul', now()))::int - 1)
+      and g.tarih <= (timezone('Europe/Istanbul', now()))::date
   ) s on true
 $$;
 
@@ -237,7 +239,9 @@ language sql stable security definer set search_path = public as $$
   left join lateral (
     select coalesce(sum(gun_soru(g)), 0) soru, coalesce(sum(gun_net(g)), 0) net
     from gunluk_kayitlar g
-    where g.ogrenci_id = o.id and g.tarih >= date_trunc('month', current_date)::date
+    where g.ogrenci_id = o.id
+      and g.tarih >= (timezone('Europe/Istanbul', now()))::date - (extract(isodow from timezone('Europe/Istanbul', now()))::int - 1)
+      and g.tarih <= (timezone('Europe/Istanbul', now()))::date
   ) s on true
 $$;
 
@@ -249,7 +253,8 @@ language sql stable security definer set search_path = public as $$
     from gunluk_kayitlar
     join ogrenciler o on o.id = gunluk_kayitlar.ogrenci_id
     where o.okul_id = p_okul and o.onay_durumu is true
-      and gunluk_kayitlar.tarih >= date_trunc('month', current_date)::date
+      and gunluk_kayitlar.tarih >= (timezone('Europe/Istanbul', now()))::date - (extract(isodow from timezone('Europe/Istanbul', now()))::int - 1)
+      and gunluk_kayitlar.tarih <= (timezone('Europe/Istanbul', now()))::date
   )
   select * from (
     select 'Türkçe' ders, coalesce(sum(turkce_soru), 0)::bigint soru, trunc(coalesce(sum(turkce_dogru - turkce_yanlis / 4.0), 0), 2) net from g

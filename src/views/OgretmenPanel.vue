@@ -6,14 +6,13 @@ import { supabase } from '../supabase'
 import { toast } from '../services/toast'
 import HaftalikCetvel from '../components/HaftalikCetvel.vue'
 import Liderlik from '../components/Liderlik.vue'
-import { davetBaglantisi, gunOzeti, isoGun, netYazi } from '../lib/dersler'
+import { davetBaglantisi, isoGun } from '../lib/dersler'
 import { gecenHafta, raporHazirla } from '../../supabase/functions/haftalik-posta/raporVerisi.js'
 import {
   aralikKayitlari,
   bolgeOzet,
   danismaniBul,
   dersOzet,
-  haftalikCeteler,
   kayitTarihleri,
   liderlik,
   ogretmenBilgisiGuncelle,
@@ -28,7 +27,6 @@ const router = useRouter()
 const yukleniyor = ref(true)
 const kart = ref(null)
 const ogrenciler = ref([])
-const ceteler = ref([])
 const okul = ref(null)
 const bolge = ref(null)
 const dersler = ref([])
@@ -72,7 +70,23 @@ const sinifSecenekleri = computed(() => {
 })
 const bekleyenler = computed(() => ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu === false))
 const onaylilar = computed(() => ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu === true && ogrenci.danisman_id === kart.value?.id))
+const danismanMi = computed(() => onaylilar.value.length > 0)
 const danismansizlar = computed(() => ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu === true && !ogrenci.danisman_id))
+const okulSiniflari = computed(() => {
+  const grup = new Map()
+  for (const ogrenci of ogrenciler.value.filter((kayit) => kayit.onay_durumu)) {
+    const sinif = String(ogrenci.sinif)
+    const liste = grup.get(sinif) ?? []
+    liste.push(ogrenci)
+    grup.set(sinif, liste)
+  }
+  return [...grup.entries()]
+    .sort((a, b) => Number(a[0]) - Number(b[0]))
+    .map(([sinif, liste]) => ({
+      sinif,
+      ogrenciler: liste.sort((a, b) => a.ad_soyad.localeCompare(b.ad_soyad, 'tr')),
+    }))
+})
 const bilgiSatirlari = computed(() => onaylilar.value.map((ogrenci) => {
   const son = sonGunler.value.get(ogrenci.id) || ''
   const fark = son ? gunFarki(son) : null
@@ -101,18 +115,6 @@ function sonGunYazi(iso, fark) {
   return `${fark} gün önce · ${tarih}`
 }
 
-function haftaOzeti(ogrenciId) {
-  return ceteler.value.filter((kayit) => kayit.ogrenci_id === ogrenciId).reduce(
-    (toplam, kayit) => {
-      const ozet = gunOzeti(kayit)
-      toplam.soru += ozet.soru
-      toplam.net += ozet.net
-      return toplam
-    },
-    { soru: 0, net: 0 },
-  )
-}
-
 async function yukle() {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return
@@ -129,15 +131,13 @@ async function yukle() {
   ogrenciler.value = await okulOgrencileri(kart.value.okul_id)
   const onayliIdler = ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu && ogrenci.danisman_id === kart.value.id).map((ogrenci) => ogrenci.id)
   postaHaftasi.value = gecenHafta()
-  const [hafta, okulSonuc, bolgeSonuc, dersSonuc, tarihler, gecen] = await Promise.all([
-    haftalikCeteler(onayliIdler),
+  const [okulSonuc, bolgeSonuc, dersSonuc, tarihler, gecen] = await Promise.all([
     okulOzet(kart.value.okul_id),
     bolgeOzet(kart.value.okullar?.il, kart.value.okullar?.ilce),
     dersOzet(kart.value.okul_id),
     kayitTarihleri(onayliIdler),
     aralikKayitlari(onayliIdler, postaHaftasi.value.baslangic, postaHaftasi.value.bitis),
   ])
-  ceteler.value = hafta
   sonGunler.value = tarihler.reduce((harita, kayit) => {
     const tarih = String(kayit.tarih).slice(0, 10)
     const mevcut = harita.get(kayit.ogrenci_id)
@@ -299,59 +299,76 @@ onMounted(async () => {
             </article>
           </div>
 
-          <div class="bolum-baslik">
-            <h2>Öğrencilerim</h2>
-            <span class="soluk">{{ postaHaftasi.baslangic }} – {{ postaHaftasi.bitis }}</span>
-          </div>
-          <p class="not">Üç gündür boşsa son gün kırmızı durur. Çizelge, pazartesi mektubundaki haftadır.</p>
-          <article v-for="satir in bilgiSatirlari" :key="satir.ogrenci.id" class="kisi-kart" :class="{ sessiz: satir.fark == null || satir.fark >= 3 }">
-            <header>
-              <strong>{{ satir.ogrenci.ad_soyad }}</strong>
-              <small>{{ satir.ogrenci.sinif }}. sınıf</small>
-              <em>{{ sonGunYazi(satir.son, satir.fark) }}</em>
-            </header>
-            <div class="kisi-sayilar">
-              <p>
-                <span>Son 7 gün</span>
-                <b>{{ haftaOzeti(satir.ogrenci.id).soru }}</b>
-                <small>{{ netYazi(haftaOzeti(satir.ogrenci.id).net) }} net</small>
-              </p>
-              <p>
-                <span>Geçen hafta</span>
-                <b>{{ satir.rapor.toplamSoru }}</b>
-                <small>{{ satir.rapor.netYazi }} net</small>
-              </p>
+          <template v-if="danismanMi">
+            <div class="bolum-baslik">
+              <h2>Öğrencilerim</h2>
+              <span class="soluk">{{ postaHaftasi.baslangic }} – {{ postaHaftasi.bitis }}</span>
             </div>
-            <button type="button" class="kucuk-dugme" @click="cizelgeAc(satir.ogrenci.id)">{{ acikOgrenci === satir.ogrenci.id ? 'Kapat' : 'Çizelge' }}</button>
-          </article>
-          <p v-if="!bilgiSatirlari.length" class="bos">Henüz onaylı öğrencin yok.</p>
-          <HaftalikCetvel v-if="acikRapor" :rapor="acikRapor" />
-
-          <div class="kutu" style="margin-top: 1rem;">
-            <div class="bolum-baslik"><h2>Danışmansız</h2></div>
-            <p class="not">Aynı okuldalar. Bağlantıyı iletebilir ya da kendin bağlayabilirsin.</p>
-            <article v-for="ogrenci in danismansizlar" :key="ogrenci.id" class="ogrenci-satir">
-              <span class="avatar">{{ basHarf(ogrenci.ad_soyad) }}</span>
-              <span>
-                <strong>{{ ogrenci.ad_soyad }}</strong>
-                <small>{{ ogrenci.sinif }}. sınıf</small>
-              </span>
-              <button type="button" class="ikincil" @click="kendimeBagla(ogrenci)">Bana bağla</button>
+            <p class="not">Sayılar pazartesi mektubundaki haftadır. Üç gündür boşsa son gün kırmızı durur.</p>
+            <article v-for="satir in bilgiSatirlari" :key="satir.ogrenci.id" class="kisi-kart" :class="{ sessiz: satir.fark == null || satir.fark >= 3 }">
+              <header>
+                <strong>{{ satir.ogrenci.ad_soyad }}</strong>
+                <small>{{ satir.ogrenci.sinif }}. sınıf</small>
+                <em>{{ sonGunYazi(satir.son, satir.fark) }}</em>
+              </header>
+              <div class="kisi-sayilar">
+                <p>
+                  <span>Soru</span>
+                  <b>{{ satir.rapor.toplamSoru }}</b>
+                  <small>{{ satir.rapor.netYazi }} net</small>
+                </p>
+              </div>
+              <button type="button" class="kucuk-dugme" @click="cizelgeAc(satir.ogrenci.id)">{{ acikOgrenci === satir.ogrenci.id ? 'Kapat' : 'Çizelge' }}</button>
             </article>
-            <p v-if="!danismansizlar.length" class="bos">Danışmansız öğrenci yok.</p>
-            <form class="ekle-satir" @submit.prevent="kodlaBagla">
-              <select v-model="seciliOgrenci" class="yazi-alani">
-                <option value="">Öğrenci seç</option>
-                <option v-for="ogrenci in danismansizlar" :key="ogrenci.id" :value="ogrenci.id">{{ ogrenci.ad_soyad }}</option>
-              </select>
-              <input v-model="baglamaKodu" placeholder="Kod" aria-label="Öğretmen kodu" class="yazi-alani kod-alani" />
-              <button type="submit" class="kucuk-dugme">Ata</button>
-            </form>
-          </div>
+            <HaftalikCetvel v-if="acikRapor" :rapor="acikRapor" />
+
+            <div class="kutu" style="margin-top: 1rem;">
+              <div class="bolum-baslik"><h2>Danışmansız</h2></div>
+              <p class="not">Aynı okuldalar. Bağlantıyı iletebilir ya da kendin bağlayabilirsin.</p>
+              <article v-for="ogrenci in danismansizlar" :key="ogrenci.id" class="ogrenci-satir">
+                <span class="avatar">{{ basHarf(ogrenci.ad_soyad) }}</span>
+                <span>
+                  <strong>{{ ogrenci.ad_soyad }}</strong>
+                  <small>{{ ogrenci.sinif }}. sınıf</small>
+                </span>
+                <button type="button" class="ikincil" @click="kendimeBagla(ogrenci)">Bana bağla</button>
+              </article>
+              <p v-if="!danismansizlar.length" class="bos">Danışmansız öğrenci yok.</p>
+              <form class="ekle-satir" @submit.prevent="kodlaBagla">
+                <select v-model="seciliOgrenci" class="yazi-alani">
+                  <option value="">Öğrenci seç</option>
+                  <option v-for="ogrenci in danismansizlar" :key="ogrenci.id" :value="ogrenci.id">{{ ogrenci.ad_soyad }}</option>
+                </select>
+                <input v-model="baglamaKodu" placeholder="Kod" aria-label="Öğretmen kodu" class="yazi-alani kod-alani" />
+                <button type="submit" class="kucuk-dugme">Ata</button>
+              </form>
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="bolum-baslik"><h2>Okuldaki öğrenciler</h2></div>
+            <p class="not">Bunlar henüz senin öğrencin değil. Danışmanı olmayanı kendine bağlayabilirsin.</p>
+            <section v-for="grup in okulSiniflari" :key="grup.sinif" class="kutu" style="margin-top: 0.8rem;">
+              <div class="bolum-baslik"><h2>{{ grup.sinif }}. sınıf</h2></div>
+              <article v-for="ogrenci in grup.ogrenciler" :key="ogrenci.id" class="ogrenci-satir">
+                <span class="avatar">{{ basHarf(ogrenci.ad_soyad) }}</span>
+                <span>
+                  <strong>{{ ogrenci.ad_soyad }}</strong>
+                  <small>{{ ogrenci.rumuz }}</small>
+                </span>
+                <button v-if="!ogrenci.danisman_id" type="button" class="ikincil" @click="kendimeBagla(ogrenci)">Bana bağla</button>
+                <small v-else class="soluk">Danışmanı var</small>
+              </article>
+            </section>
+            <p v-if="!okulSiniflari.length" class="bos">Okulda onaylı öğrenci yok.</p>
+          </template>
         </div>
 
         <div :class="{ 'telefon-gizli': sekme !== 'okul' }">
-          <div class="bolum-baslik"><h2>Bu ay</h2></div>
+          <div class="bolum-baslik">
+            <h2>Bu hafta</h2>
+            <span class="soluk">Pazartesiden bugüne, öğrenci başı</span>
+          </div>
           <div class="sayi-serit">
             <article class="sayi-kart">
               <em>Okul, öğrenci başı</em>
@@ -366,7 +383,7 @@ onMounted(async () => {
           </div>
 
           <div class="kutu" style="margin-top: 0.9rem;">
-            <div class="bolum-baslik"><h2>Ders ders</h2></div>
+            <div class="bolum-baslik"><h2>Ders ders</h2><span class="soluk">Bu hafta</span></div>
             <div v-if="dersler.length" class="ders-cubuklari">
               <div v-for="ders in dersler" :key="ders.ders" class="ders-olcu">
                 <span>{{ ders.ders }}</span>
@@ -386,7 +403,7 @@ onMounted(async () => {
           <div class="parca">
             <button v-for="secenek in [{ id: 'soru', ad: 'Soru' }, { id: 'net', ad: 'Net' }, { id: 'kitap', ad: 'Kitap' }]" :key="secenek.id" type="button" :class="{ secili: olcut === secenek.id }" @click="olcutSec(secenek.id)">{{ secenek.ad }}</button>
           </div>
-          <Liderlik v-if="seciliSinif" :kisiler="sira" :olcut="olcut" :baslik="`${seciliSinif}. sınıf`" />
+          <Liderlik v-if="seciliSinif" :kisiler="sira" :olcut="olcut" :baslik="`${kart.okullar?.il || 'İl'} · ${seciliSinif}. sınıf · bu hafta`" />
           <p v-else class="bos">Okulda onaylı öğrenci yok.</p>
         </div>
       </div>
