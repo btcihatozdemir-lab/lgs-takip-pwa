@@ -253,7 +253,7 @@ language sql stable security definer set search_path = public as $$
     from gunluk_kayitlar
     join ogrenciler o on o.id = gunluk_kayitlar.ogrenci_id
     where o.okul_id = p_okul and o.onay_durumu is true
-      and gunluk_kayitlar.tarih >= (timezone('Europe/Istanbul', now()))::date - (extract(isodow from timezone('Europe/Istanbul', now()))::int - 1)
+      and gunluk_kayitlar.tarih >= (timezone('Europe/Istanbul', now()))::date - 6
       and gunluk_kayitlar.tarih <= (timezone('Europe/Istanbul', now()))::date
   )
   select * from (
@@ -285,6 +285,50 @@ grant execute on function public.aylik_ozet(uuid) to authenticated;
 grant execute on function public.okul_ozet(uuid) to authenticated;
 grant execute on function public.bolge_ozet(text, text) to authenticated;
 grant execute on function public.ders_ozet(uuid) to authenticated;
+
+create or replace function public.kademe_ozet(p_il text, p_ilce text, p_okul uuid, p_alt int, p_ust int)
+returns table (soru numeric, net numeric, kitap numeric, basari numeric)
+language sql stable security definer set search_path = public as $$
+  with pencere as (
+    select (timezone('Europe/Istanbul', now()))::date as bitis,
+           (timezone('Europe/Istanbul', now()))::date - 6 as baslangic
+  ),
+  ogr as (
+    select o.id
+    from ogrenciler o
+    join okullar k on k.id = o.okul_id
+    where o.onay_durumu is true
+      and k.il = p_il
+      and (p_ilce is null or p_ilce = '' or k.ilce = p_ilce)
+      and (p_okul is null or o.okul_id = p_okul)
+      and o.sinif between p_alt and p_ust
+  ),
+  gun as (
+    select coalesce(sum(gun_soru(g)), 0) as soru,
+           coalesce(sum(gun_net(g)), 0) as net,
+           coalesce(sum(g.turkce_dogru + g.matematik_dogru + g.fen_dogru + g.inkilap_dogru + g.din_dogru + g.ingilizce_dogru), 0) as dogru
+    from pencere p
+    left join gunluk_kayitlar g
+      on g.ogrenci_id in (select id from ogr)
+     and g.tarih >= p.baslangic
+     and g.tarih <= p.bitis
+  ),
+  kitap as (
+    select count(*)::numeric as adet
+    from kitaplar b
+    cross join pencere p
+    where b.ogrenci_id in (select id from ogr)
+      and b.bitti_tarihi >= p.baslangic
+      and b.bitti_tarihi <= p.bitis
+  )
+  select round(gun.soru / 7.0, 1),
+         trunc(gun.net / 7.0, 2),
+         round(kitap.adet / 7.0, 1),
+         case when gun.soru = 0 then 0 else trunc((gun.dogru::numeric / gun.soru) * 100, 1) end
+  from gun, kitap
+$$;
+
+grant execute on function public.kademe_ozet(text, text, uuid, int, int) to authenticated;
 
 drop policy if exists lgs_okul_ogretmen_guncelle on public.okullar;
 create policy lgs_okul_ogretmen_guncelle on public.okullar

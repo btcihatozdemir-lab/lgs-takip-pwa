@@ -936,6 +936,90 @@ input[type='number'] {
   gap: 1.5rem;
 }
 
+.ozet-liste {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.ozet-kutu {
+  padding: 0.85rem 0.9rem 0.75rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 1rem;
+  background: var(--kart);
+}
+
+.ozet-kutu header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.65rem;
+}
+
+.ozet-kutu header strong {
+  font-size: 1rem;
+}
+
+.ozet-simge {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  place-items: center;
+  border-radius: 0.7rem;
+  background: var(--yosun-acik);
+  color: var(--yosun);
+}
+
+.ozet-simge svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ozet-kutu dl {
+  display: grid;
+  gap: 0.28rem;
+  margin: 0;
+}
+
+.ozet-kutu dl div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.ozet-kutu dt {
+  color: var(--soluk);
+  font-size: 0.78rem;
+}
+
+.ozet-kutu dd {
+  margin: 0;
+  font-family: var(--baslik);
+  font-size: 1.25rem;
+  font-weight: 550;
+  line-height: 1.1;
+}
+
+.ozet-kutu dd span {
+  margin-left: 0.35rem;
+  color: var(--yosun);
+  font-family: var(--yazi);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+@media (min-width: 900px) {
+  .ozet-liste {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .sayi-serit {
   display: grid;
   grid-template-columns: 1fr 1fr;

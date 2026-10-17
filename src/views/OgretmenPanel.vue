@@ -10,8 +10,8 @@ import { davetBaglantisi, isoGun } from '../lib/dersler'
 import { istanbulGunu, raporHazirla, tarihEkle } from '../../supabase/functions/haftalik-posta/raporVerisi.js'
 import {
   aralikKayitlari,
-  bolgeOzet,
   dersOzet,
+  kademeOzet,
   kayitTarihleri,
   liderlik,
   ogretmenBilgisiGuncelle,
@@ -19,8 +19,13 @@ import {
   ogrenciBilgisiGuncelle,
   okulBilgisiGuncelle,
   okulOgrencileri,
-  okulOzet,
 } from '../services/calisma'
+
+const KADEMELER = [
+  { ad: 'İlkokul', alt: 1, ust: 4 },
+  { ad: 'Ortaokul', alt: 5, ust: 8 },
+  { ad: 'Lise', alt: 9, ust: 12 },
+]
 
 const router = useRouter()
 const yukleniyor = ref(true)
@@ -28,6 +33,8 @@ const kart = ref(null)
 const ogrenciler = ref([])
 const okul = ref(null)
 const bolge = ref(null)
+const ilOzet = ref(null)
+const kademe = ref(KADEMELER[1])
 const dersler = ref([])
 const sira = ref([])
 const olcut = ref('soru')
@@ -102,6 +109,19 @@ function gunFarki(iso) {
   return Math.round((bugun - gun) / 86400000)
 }
 
+function kademeSec(liste, okulAdi) {
+  const sayilar = liste.filter((ogrenci) => ogrenci.onay_durumu).map((ogrenci) => Number(ogrenci.sinif)).filter((sinif) => sinif >= 1 && sinif <= 12)
+  if (sayilar.length) {
+    const puan = [0, 0, 0]
+    for (const sinif of sayilar) puan[sinif <= 4 ? 0 : sinif <= 8 ? 1 : 2] += 1
+    return KADEMELER[puan.indexOf(Math.max(...puan))]
+  }
+  const ad = String(okulAdi || '').toLocaleLowerCase('tr-TR')
+  if (ad.includes('ilkokul')) return KADEMELER[0]
+  if (ad.includes('lise')) return KADEMELER[2]
+  return KADEMELER[1]
+}
+
 function sonYediGun() {
   const bitis = istanbulGunu()
   return { baslangic: tarihEkle(bitis, -6), bitis }
@@ -130,9 +150,12 @@ async function yukle() {
   ogrenciler.value = await okulOgrencileri(kart.value.okul_id)
   const onayliIdler = ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu && ogrenci.danisman_id === kart.value.id).map((ogrenci) => ogrenci.id)
   listeAraligi.value = sonYediGun()
-  const [okulSonuc, bolgeSonuc, dersSonuc, tarihler, gecen] = await Promise.all([
-    okulOzet(kart.value.okul_id),
-    bolgeOzet(kart.value.okullar?.il, kart.value.okullar?.ilce),
+  kademe.value = kademeSec(ogrenciler.value, kart.value.okullar?.okul_adi)
+  const ortak = { il: kart.value.okullar?.il, alt: kademe.value.alt, ust: kademe.value.ust }
+  const [okulSonuc, bolgeSonuc, ilSonuc, dersSonuc, tarihler, gecen] = await Promise.all([
+    kademeOzet({ ...ortak, okulId: kart.value.okul_id }),
+    kademeOzet({ ...ortak, ilce: kart.value.okullar?.ilce }),
+    kademeOzet(ortak),
     dersOzet(kart.value.okul_id),
     kayitTarihleri(onayliIdler),
     aralikKayitlari(onayliIdler, listeAraligi.value.baslangic, listeAraligi.value.bitis),
@@ -146,6 +169,7 @@ async function yukle() {
   gecenKayitlar.value = gecen
   okul.value = okulSonuc
   bolge.value = bolgeSonuc
+  ilOzet.value = ilSonuc
   dersler.value = dersSonuc || []
   if (!sinifSecenekleri.value.includes(seciliSinif.value)) seciliSinif.value = sinifSecenekleri.value[0] || ''
   await sirayiGetir()
@@ -370,24 +394,48 @@ onMounted(async () => {
 
         <div :class="{ 'telefon-gizli': sekme !== 'okul' }">
           <div class="bolum-baslik">
-            <h2>Bu hafta</h2>
-            <span class="soluk">Pazartesiden bugüne, öğrenci başı</span>
+            <h2>Son 7 gün</h2>
+            <span class="soluk">{{ kademe.ad }}</span>
           </div>
-          <div class="sayi-serit">
-            <article class="sayi-kart">
-              <em>Okul, öğrenci başı</em>
-              <strong>{{ okul?.soru ?? '—' }}</strong>
-              <small>{{ okul?.net ?? '—' }} net · {{ okul?.kitap ?? '—' }} kitap</small>
+          <p class="not">{{ kademe.alt }}–{{ kademe.ust }}. sınıflar birlikte sayılır. Toplam 7'ye bölünür.</p>
+          <div class="ozet-liste">
+            <article class="ozet-kutu">
+              <header>
+                <span class="ozet-simge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/></svg></span>
+                <strong>Okul</strong>
+              </header>
+              <dl>
+                <div><dt>Soru</dt><dd>{{ okul?.soru ?? '—' }}</dd></div>
+                <div><dt>Net</dt><dd>{{ okul?.net ?? '—' }} <span>% {{ okul?.basari ?? '—' }}</span></dd></div>
+                <div><dt>Kitap okuma</dt><dd>{{ okul?.kitap ?? '—' }}</dd></div>
+              </dl>
             </article>
-            <article class="sayi-kart">
-              <em>{{ kart.okullar?.ilce || 'İlçe' }} ortalaması</em>
-              <strong>{{ bolge?.soru ?? '—' }}</strong>
-              <small>{{ bolge?.net ?? '—' }} net</small>
+            <article class="ozet-kutu">
+              <header>
+                <span class="ozet-simge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21s7-5.4 7-11a7 7 0 1 0-14 0c0 5.6 7 11 7 11z"/><circle cx="12" cy="10" r="2.2"/></svg></span>
+                <strong>{{ kart.okullar?.ilce || 'İlçe' }}</strong>
+              </header>
+              <dl>
+                <div><dt>Soru</dt><dd>{{ bolge?.soru ?? '—' }}</dd></div>
+                <div><dt>Net</dt><dd>{{ bolge?.net ?? '—' }} <span>% {{ bolge?.basari ?? '—' }}</span></dd></div>
+                <div><dt>Kitap okuma</dt><dd>{{ bolge?.kitap ?? '—' }}</dd></div>
+              </dl>
+            </article>
+            <article class="ozet-kutu">
+              <header>
+                <span class="ozet-simge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M4 10h16M9 6v12M15 6v12"/></svg></span>
+                <strong>{{ kart.okullar?.il || 'İl' }}</strong>
+              </header>
+              <dl>
+                <div><dt>Soru</dt><dd>{{ ilOzet?.soru ?? '—' }}</dd></div>
+                <div><dt>Net</dt><dd>{{ ilOzet?.net ?? '—' }} <span>% {{ ilOzet?.basari ?? '—' }}</span></dd></div>
+                <div><dt>Kitap okuma</dt><dd>{{ ilOzet?.kitap ?? '—' }}</dd></div>
+              </dl>
             </article>
           </div>
 
           <div class="kutu" style="margin-top: 0.9rem;">
-            <div class="bolum-baslik"><h2>Ders ders</h2><span class="soluk">Bu hafta</span></div>
+            <div class="bolum-baslik"><h2>Ders ders</h2><span class="soluk">Son 7 gün</span></div>
             <div v-if="dersler.length" class="ders-cubuklari">
               <div v-for="ders in dersler" :key="ders.ders" class="ders-olcu">
                 <span>{{ ders.ders }}</span>
