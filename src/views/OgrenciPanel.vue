@@ -87,7 +87,7 @@ async function yukle() {
   gunler.value = hafta
   aylar.value = ay || []
   ogretmenler.value = hocalar
-  seciliAlicilar.value = alicilar
+  seciliAlicilar.value = danismaniDahilEt(alicilar)
   await sirayiGetir()
 }
 
@@ -127,8 +127,15 @@ function rakamYaz(olay, alan) {
   bugun.value[alan] = rakam === '' ? 0 : Number(rakam)
 }
 
+function danismaniDahilEt(idler) {
+  const danismanId = kart.value?.danisman_id
+  if (!danismanId) return idler
+  return [...new Set([danismanId, ...idler])]
+}
+
 async function alicilariKaydet() {
   try {
+    seciliAlicilar.value = danismaniDahilEt(seciliAlicilar.value)
     await cetelAlicilariniKaydet(kart.value.id, seciliAlicilar.value)
     toast.basari('Pazartesi postası alıcıları kaydedildi.')
   } catch (hata) {
@@ -137,6 +144,7 @@ async function alicilariKaydet() {
 }
 
 function aliciDegistir(id, secili) {
+  if (id === kart.value?.danisman_id) return
   if (secili) seciliAlicilar.value = [...new Set([...seciliAlicilar.value, id])]
   else seciliAlicilar.value = seciliAlicilar.value.filter((ogretmenId) => ogretmenId !== id)
 }
@@ -334,11 +342,11 @@ onMounted(async () => {
 
       <section v-show="sekme === 'ben'">
         <div class="bolum-baslik"><h2>Pazartesi postası</h2></div>
-        <p class="not">Her pazartesi sabah 08:00'de son 7 gününün özeti, seçtiğin okul öğretmenlerine e-posta gider. Öğretmene dokun, seçili olanlar yeşil görünür. Bitince kaydet. Bu liste danışmanından ayrıdır.</p>
+        <p class="not">Her pazartesi sabah 08:00'de son 7 gününün özeti danışmanına ve seçtiğin öğretmenlere gider.</p>
         <div class="cip-grup">
           <button v-for="ogretmen in ogretmenler" :key="ogretmen.id" type="button" class="cip" :class="{ secili: seciliAlicilar.includes(ogretmen.id) }" @click="aliciDegistir(ogretmen.id, !seciliAlicilar.includes(ogretmen.id))">
             <span class="harf">{{ basHarf(ogretmen.ad_soyad) }}</span>
-            {{ ogretmen.ad_soyad }}
+            {{ ogretmen.ad_soyad }}{{ ogretmen.id === kart.danisman_id ? ' · danışman' : '' }}
           </button>
         </div>
         <p v-if="!ogretmenler.length" class="bos">Okulunda kayıtlı öğretmen yok.</p>

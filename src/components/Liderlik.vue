@@ -14,6 +14,7 @@ const RENKLER = ['#8d4b32', '#1e4d3a', '#21596f', '#6d5424', '#5a4874', '#3c5c49
 
 const ilkOn = computed(() => props.kisiler.filter((kisi) => kisi.sira == null || Number(kisi.sira) <= 10).slice(0, 10))
 const toplam = computed(() => Number(props.kisiler[0]?.toplam || 0))
+const benim = computed(() => props.kisiler.find((kisi) => kisi.ogrenci_id === props.benimId) || null)
 const disarida = computed(() => props.kisiler.find((kisi) => kisi.ogrenci_id === props.benimId && Number(kisi.sira) > 10) || null)
 
 function harf(ad) {
@@ -40,7 +41,10 @@ function madalya(sira) {
 <template>
   <section v-if="ilkOn.length" class="pano">
     <h3 class="pano-baslik">{{ baslik }}</h3>
-    <p v-if="toplam" class="pano-ozet">{{ toplam }} kişi arasında ilk 10</p>
+    <p v-if="toplam" class="pano-ozet">
+      İlk 10 kişi sıralanır.
+      <template v-if="benim"> {{ toplam }} öğrenci arasında {{ benim.sira }}. sıradasınız.</template>
+    </p>
     <ol class="pano-liste">
       <li v-for="kisi in ilkOn" :key="kisi.ogrenci_id" class="pano-satir" :class="{ 'benim-ic': kisi.ogrenci_id === benimId }">
         <span v-if="madalya(kisi.sira)" class="madalya" :class="madalya(kisi.sira)">{{ kisi.sira }}</span>
