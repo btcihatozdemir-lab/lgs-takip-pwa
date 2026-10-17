@@ -1071,6 +1071,24 @@ input[type='number'] {
   gap: 0.7rem;
 }
 
+.ders-okul {
+  margin: 0 -0.35rem;
+  padding: 0.28rem 0.35rem;
+  border-radius: 0.55rem;
+}
+
+.ders-okul.ust {
+  background: #e5f3ea;
+}
+
+.ders-okul.denk {
+  background: #f8f3d4;
+}
+
+.ders-okul.alt {
+  background: #f8e4ea;
+}
+
 .ders-okul strong {
   font-size: 0.98rem;
 }

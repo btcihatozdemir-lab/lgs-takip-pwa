@@ -135,10 +135,25 @@ function sonYediGun() {
   return { baslangic: tarihEkle(bitis, -6), bitis }
 }
 
+function yuvarla(deger) {
+  return Math.round(Number(deger) || 0)
+}
+
 function olcuYazi(satir, kisa) {
   if (!satir) return '—'
-  if (kisa) return `${satir.soru} S - ${satir.net} N - B %${satir.basari}`
-  return `${satir.soru} soru - ${satir.net} net - Başarı %${satir.basari}`
+  const soru = yuvarla(satir.soru)
+  const net = yuvarla(satir.net)
+  const basari = yuvarla(satir.basari)
+  if (kisa) return `${soru} S - ${net} N - B %${basari}`
+  return `${soru} soru - ${net} net - Başarı %${basari}`
+}
+
+function basariSinifi(okul, il) {
+  if (!okul || !il) return ''
+  const fark = yuvarla(okul.basari) - yuvarla(il.basari)
+  if (fark > 0) return 'ust'
+  if (fark < 0) return 'alt'
+  return 'denk'
 }
 
 function yakinYazi(fark) {
@@ -425,7 +440,7 @@ onMounted(async () => {
               <dl>
                 <div><dt>Soru</dt><dd>{{ okul?.soru ?? '—' }}</dd></div>
                 <div><dt>Net</dt><dd>{{ okul?.net ?? '—' }} <span>% {{ okul?.basari ?? '—' }}</span></dd></div>
-                <div><dt>Kitap okuma</dt><dd>{{ okul?.kitap ?? '—' }}</dd></div>
+                <div><dt>Kitap okuma</dt><dd>{{ okul?.kitap ?? '—' }} <span>sayfa</span></dd></div>
               </dl>
             </article>
             <article class="ozet-kutu">
@@ -436,7 +451,7 @@ onMounted(async () => {
               <dl>
                 <div><dt>Soru</dt><dd>{{ bolge?.soru ?? '—' }}</dd></div>
                 <div><dt>Net</dt><dd>{{ bolge?.net ?? '—' }} <span>% {{ bolge?.basari ?? '—' }}</span></dd></div>
-                <div><dt>Kitap okuma</dt><dd>{{ bolge?.kitap ?? '—' }}</dd></div>
+                <div><dt>Kitap okuma</dt><dd>{{ bolge?.kitap ?? '—' }} <span>sayfa</span></dd></div>
               </dl>
             </article>
             <article class="ozet-kutu">
@@ -447,7 +462,7 @@ onMounted(async () => {
               <dl>
                 <div><dt>Soru</dt><dd>{{ ilOzet?.soru ?? '—' }}</dd></div>
                 <div><dt>Net</dt><dd>{{ ilOzet?.net ?? '—' }} <span>% {{ ilOzet?.basari ?? '—' }}</span></dd></div>
-                <div><dt>Kitap okuma</dt><dd>{{ ilOzet?.kitap ?? '—' }}</dd></div>
+                <div><dt>Kitap okuma</dt><dd>{{ ilOzet?.kitap ?? '—' }} <span>sayfa</span></dd></div>
               </dl>
             </article>
           </div>
@@ -455,7 +470,7 @@ onMounted(async () => {
           <div class="kutu" style="margin-top: 0.9rem;">
             <div class="bolum-baslik"><h2>Ders ders</h2><span class="soluk">{{ kademe.ad }} · son 7 gün</span></div>
             <article v-for="ders in dersKarsilastirma" :key="ders.ad" class="ders-karsilastirma">
-              <div class="ders-okul">
+              <div class="ders-okul" :class="basariSinifi(ders.okul, ders.il)">
                 <strong>{{ ders.ad }}</strong>
                 <span class="olcu-uzun">{{ olcuYazi(ders.okul) }}</span>
                 <span class="olcu-kisa">{{ olcuYazi(ders.okul, true) }}</span>

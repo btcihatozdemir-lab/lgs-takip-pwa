@@ -306,26 +306,19 @@ language sql stable security definer set search_path = public as $$
   gun as (
     select coalesce(sum(gun_soru(g)), 0) as soru,
            coalesce(sum(gun_net(g)), 0) as net,
-           coalesce(sum(g.turkce_dogru + g.matematik_dogru + g.fen_dogru + g.inkilap_dogru + g.din_dogru + g.ingilizce_dogru), 0) as dogru
+           coalesce(sum(g.turkce_dogru + g.matematik_dogru + g.fen_dogru + g.inkilap_dogru + g.din_dogru + g.ingilizce_dogru), 0) as dogru,
+           coalesce(sum(g.kitap_sayfa), 0) as sayfa
     from pencere p
     left join gunluk_kayitlar g
       on g.ogrenci_id in (select id from ogr)
      and g.tarih >= p.baslangic
      and g.tarih <= p.bitis
-  ),
-  kitap as (
-    select count(*)::numeric as adet
-    from kitaplar b
-    cross join pencere p
-    where b.ogrenci_id in (select id from ogr)
-      and b.bitti_tarihi >= p.baslangic
-      and b.bitti_tarihi <= p.bitis
   )
   select round(gun.soru / 7.0, 1),
          trunc(gun.net / 7.0, 2),
-         round(kitap.adet / 7.0, 1),
+         round(gun.sayfa / 7.0, 1),
          case when gun.soru = 0 then 0 else trunc((gun.dogru::numeric / gun.soru) * 100, 1) end
-  from gun, kitap
+  from gun
 $$;
 
 grant execute on function public.kademe_ozet(text, text, uuid, int, int) to authenticated;
