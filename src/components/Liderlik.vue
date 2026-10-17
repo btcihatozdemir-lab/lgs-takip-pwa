@@ -16,6 +16,11 @@ const RENKLER = ['#8d4b32', '#1e4d3a', '#21596f', '#6d5424', '#5a4874', '#3c5c49
 const ilkOn = computed(() => props.kisiler.filter((kisi) => kisi.sira == null || Number(kisi.sira) <= 10).slice(0, 10))
 const toplam = computed(() => Number(props.kisiler[0]?.toplam || 0))
 const benim = computed(() => props.kisiler.find((kisi) => kisi.ogrenci_id === props.benimId) || null)
+const aralik = computed(() => {
+  if (props.olcut === 'kitap') return 'Bu ay biten kitaplar.'
+  if (props.olcut === 'net') return 'Bu haftanın neti.'
+  return 'Bu hafta çözülen sorular.'
+})
 const disarida = computed(() => props.kisiler.find((kisi) => kisi.ogrenci_id === props.benimId && Number(kisi.sira) > 10) || null)
 
 function harf(ad) {
@@ -46,6 +51,7 @@ function madalya(sira) {
 <template>
   <section v-if="ilkOn.length" class="pano">
     <h3 class="pano-baslik">{{ baslik }}</h3>
+    <p class="pano-ozet">{{ aralik }}</p>
     <p v-if="toplam" class="pano-ozet">
       İlk 10 kişi sıralanır.
       <template v-if="benim"> {{ toplam }} öğrenci arasında {{ benim.sira }}. sıradasınız.</template>
@@ -75,5 +81,5 @@ function madalya(sira) {
       </div>
     </div>
   </section>
-  <p v-else class="bos">Bu ay aynı grupta henüz sıra yok.</p>
+  <p v-else class="bos">Bu aralıkta aynı grupta henüz sıra yok.</p>
 </template>

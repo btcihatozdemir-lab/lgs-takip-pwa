@@ -133,12 +133,30 @@ language sql stable security definer set search_path = public as $$
     join okullar k on k.id = o.okul_id
     where o.onay_durumu is true and o.sinif::text = p_sinif and k.il = p_il
   ),
+  zaman as (
+    select (timezone('Europe/Istanbul', now()))::date as bugun
+  ),
+  sinir as (
+    select bugun,
+      bugun - (extract(isodow from bugun)::int - 1) as hafta_basi,
+      date_trunc('month', bugun)::date as ay_basi
+    from zaman
+  ),
   puan as (
     select a.id, a.rumuz, a.okul_adi,
       case p_olcut
-        when 'kitap' then (select count(*) from kitaplar b where b.ogrenci_id = a.id)::numeric
-        when 'net' then coalesce((select sum(gun_net(g)) from gunluk_kayitlar g where g.ogrenci_id = a.id and g.tarih >= date_trunc('month', current_date)::date), 0)
-        else coalesce((select sum(gun_soru(g)) from gunluk_kayitlar g where g.ogrenci_id = a.id and g.tarih >= date_trunc('month', current_date)::date), 0)
+        when 'kitap' then (
+          select count(*) from kitaplar b, sinir z
+          where b.ogrenci_id = a.id and b.bitti_tarihi >= z.ay_basi
+        )::numeric
+        when 'net' then coalesce((
+          select sum(gun_net(g)) from gunluk_kayitlar g, sinir z
+          where g.ogrenci_id = a.id and g.tarih >= z.hafta_basi and g.tarih <= z.bugun
+        ), 0)
+        else coalesce((
+          select sum(gun_soru(g)) from gunluk_kayitlar g, sinir z
+          where g.ogrenci_id = a.id and g.tarih >= z.hafta_basi and g.tarih <= z.bugun
+        ), 0)
       end as deger
     from aday a
   ),
