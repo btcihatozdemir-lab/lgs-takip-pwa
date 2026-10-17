@@ -135,8 +135,9 @@ function sonYediGun() {
   return { baslangic: tarihEkle(bitis, -6), bitis }
 }
 
-function olcuYazi(satir) {
+function olcuYazi(satir, kisa) {
   if (!satir) return '—'
+  if (kisa) return `${satir.soru} S - ${satir.net} N - B %${satir.basari}`
   return `${satir.soru} soru - ${satir.net} net - Başarı %${satir.basari}`
 }
 
@@ -456,15 +457,18 @@ onMounted(async () => {
             <article v-for="ders in dersKarsilastirma" :key="ders.ad" class="ders-karsilastirma">
               <div class="ders-okul">
                 <strong>{{ ders.ad }}</strong>
-                <span>{{ olcuYazi(ders.okul) }}</span>
+                <span class="olcu-uzun">{{ olcuYazi(ders.okul) }}</span>
+                <span class="olcu-kisa">{{ olcuYazi(ders.okul, true) }}</span>
               </div>
               <div class="ders-karsit">
                 <em>İlçe ort.</em>
-                <span>{{ olcuYazi(ders.ilce) }}</span>
+                <span class="olcu-uzun">{{ olcuYazi(ders.ilce) }}</span>
+                <span class="olcu-kisa">{{ olcuYazi(ders.ilce, true) }}</span>
               </div>
               <div class="ders-karsit">
                 <em>İl ort.</em>
-                <span>{{ olcuYazi(ders.il) }}</span>
+                <span class="olcu-uzun">{{ olcuYazi(ders.il) }}</span>
+                <span class="olcu-kisa">{{ olcuYazi(ders.il, true) }}</span>
               </div>
             </article>
           </div>

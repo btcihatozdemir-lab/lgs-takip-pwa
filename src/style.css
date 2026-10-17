@@ -1078,10 +1078,15 @@ input[type='number'] {
 .ders-okul span,
 .ders-karsit span {
   text-align: right;
+  white-space: nowrap;
+}
+
+.olcu-uzun {
+  display: none;
 }
 
 .ders-okul span {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 650;
 }
 
@@ -1098,6 +1103,20 @@ input[type='number'] {
 
 .ders-karsit span {
   color: var(--murekkep);
+}
+
+@media (min-width: 900px) {
+  .olcu-kisa {
+    display: none;
+  }
+
+  .olcu-uzun {
+    display: inline;
+  }
+
+  .ders-okul span {
+    font-size: 0.82rem;
+  }
 }
 
 .ders-cubuklari {
