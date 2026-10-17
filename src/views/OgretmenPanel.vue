@@ -7,7 +7,7 @@ import { toast } from '../services/toast'
 import HaftalikCetvel from '../components/HaftalikCetvel.vue'
 import Liderlik from '../components/Liderlik.vue'
 import { davetBaglantisi, isoGun } from '../lib/dersler'
-import { gecenHafta, raporHazirla } from '../../supabase/functions/haftalik-posta/raporVerisi.js'
+import { istanbulGunu, raporHazirla, tarihEkle } from '../../supabase/functions/haftalik-posta/raporVerisi.js'
 import {
   aralikKayitlari,
   bolgeOzet,
@@ -43,7 +43,7 @@ const baglamaKodu = ref('')
 const seciliOgrenci = ref('')
 const sonGunler = ref(new Map())
 const gecenKayitlar = ref([])
-const postaHaftasi = ref(gecenHafta())
+const listeAraligi = ref(sonYediGun())
 const acikOgrenci = ref('')
 const iller = ilIlceListesi.map((kayit) => kayit.il)
 const ilceler = computed(() => ilIlceListesi.find((kayit) => kayit.il === seciliIl.value)?.ilceler ?? [])
@@ -93,26 +93,27 @@ const bilgiSatirlari = computed(() => onaylilar.value.map((ogrenci) => {
   const rapor = raporHazirla({
     adSoyad: ogrenci.ad_soyad,
     kayitlar: gecenKayitlar.value.filter((kayit) => kayit.ogrenci_id === ogrenci.id),
-    baslangic: postaHaftasi.value.baslangic,
-    bitis: postaHaftasi.value.bitis,
+    baslangic: listeAraligi.value.baslangic,
+    bitis: listeAraligi.value.bitis,
   })
   return { ogrenci, son, fark, rapor }
 }).sort((a, b) => (b.fark ?? 9999) - (a.fark ?? 9999)))
-const acikRapor = computed(() => bilgiSatirlari.value.find((satir) => satir.ogrenci.id === acikOgrenci.value)?.rapor || null)
-
 function gunFarki(iso) {
   const bugun = new Date(`${isoGun()}T12:00:00`)
   const gun = new Date(`${iso}T12:00:00`)
   return Math.round((bugun - gun) / 86400000)
 }
 
-function sonGunYazi(iso, fark) {
-  if (!iso) return 'Hiç yok'
-  const [yil, ay, gun] = iso.split('-')
-  const tarih = `${gun}.${ay}.${yil}`
-  if (fark <= 0) return `Bugün · ${tarih}`
-  if (fark === 1) return `Dün · ${tarih}`
-  return `${fark} gün önce · ${tarih}`
+function sonYediGun() {
+  const bitis = istanbulGunu()
+  return { baslangic: tarihEkle(bitis, -6), bitis }
+}
+
+function yakinYazi(fark) {
+  if (fark == null) return 'Hiç yok'
+  if (fark <= 0) return 'Bugün'
+  if (fark === 1) return 'Dün'
+  return `${fark} gün`
 }
 
 async function yukle() {
@@ -130,13 +131,13 @@ async function yukle() {
   okulFormuHazir.value = true
   ogrenciler.value = await okulOgrencileri(kart.value.okul_id)
   const onayliIdler = ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu && ogrenci.danisman_id === kart.value.id).map((ogrenci) => ogrenci.id)
-  postaHaftasi.value = gecenHafta()
+  listeAraligi.value = sonYediGun()
   const [okulSonuc, bolgeSonuc, dersSonuc, tarihler, gecen] = await Promise.all([
     okulOzet(kart.value.okul_id),
     bolgeOzet(kart.value.okullar?.il, kart.value.okullar?.ilce),
     dersOzet(kart.value.okul_id),
     kayitTarihleri(onayliIdler),
-    aralikKayitlari(onayliIdler, postaHaftasi.value.baslangic, postaHaftasi.value.bitis),
+    aralikKayitlari(onayliIdler, listeAraligi.value.baslangic, listeAraligi.value.bitis),
   ])
   sonGunler.value = tarihler.reduce((harita, kayit) => {
     const tarih = String(kayit.tarih).slice(0, 10)
@@ -314,27 +315,22 @@ onMounted(async () => {
           </div>
 
           <template v-if="danismanMi">
-            <div class="bolum-baslik">
-              <h2>Öğrencilerim</h2>
-              <span class="soluk">{{ postaHaftasi.baslangic }} – {{ postaHaftasi.bitis }}</span>
-            </div>
-            <p class="not">Sayılar pazartesi mektubundaki haftadır. Üç gündür boşsa son gün kırmızı durur.</p>
-            <article v-for="satir in bilgiSatirlari" :key="satir.ogrenci.id" class="kisi-kart" :class="{ sessiz: satir.fark == null || satir.fark >= 3 }">
-              <header>
+            <div class="bolum-baslik"><h2>Öğrencilerim</h2></div>
+            <article v-for="satir in bilgiSatirlari" :key="satir.ogrenci.id" class="kisi-kart" :class="{ acik: acikOgrenci === satir.ogrenci.id, sessiz: satir.fark == null || satir.fark >= 3 }">
+              <div class="kisi-ust">
                 <strong>{{ satir.ogrenci.ad_soyad }}</strong>
-                <small>{{ satir.ogrenci.sinif }}. sınıf</small>
-                <em>{{ sonGunYazi(satir.son, satir.fark) }}</em>
-              </header>
-              <div class="kisi-sayilar">
-                <p>
-                  <span>Soru</span>
-                  <b>{{ satir.rapor.toplamSoru }}</b>
-                  <small>{{ satir.rapor.netYazi }} net</small>
-                </p>
+                <span class="kisi-olcu"><b>{{ satir.rapor.toplamSoru }}</b> Soru <em>({{ yakinYazi(satir.fark) }})</em></span>
+                <button type="button" class="cetvel-dugme" :class="{ acik: acikOgrenci === satir.ogrenci.id }" :aria-expanded="acikOgrenci === satir.ogrenci.id" aria-label="Çizelge" @click="cizelgeAc(satir.ogrenci.id)">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 7h14M5 12h14M5 17h14" />
+                    <circle cx="8" cy="7" r="1.2" />
+                    <circle cx="8" cy="12" r="1.2" />
+                    <circle cx="8" cy="17" r="1.2" />
+                  </svg>
+                </button>
               </div>
-              <button type="button" class="kucuk-dugme" @click="cizelgeAc(satir.ogrenci.id)">{{ acikOgrenci === satir.ogrenci.id ? 'Kapat' : 'Çizelge' }}</button>
+              <HaftalikCetvel v-if="acikOgrenci === satir.ogrenci.id" :rapor="satir.rapor" />
             </article>
-            <HaftalikCetvel v-if="acikRapor" :rapor="acikRapor" />
 
             <div class="kutu" style="margin-top: 1rem;">
               <div class="bolum-baslik"><h2>Danışmansız</h2></div>

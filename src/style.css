@@ -588,31 +588,155 @@ input[type='number'] {
 }
 
 .kisi-kart {
-  display: grid;
-  gap: 0.75rem;
-  margin-bottom: 0.7rem;
-  padding: 0.85rem;
+  margin-bottom: 0.55rem;
+  padding: 0.7rem 0.75rem;
   border: 1px solid var(--cizgi);
   border-radius: 1.05rem;
   background: var(--kart);
 }
 
-.kisi-kart header strong,
-.kisi-kart header small,
-.kisi-kart header em {
-  display: block;
+.kisi-kart.acik {
+  border-color: #c9d9d0;
 }
 
-.kisi-kart header small,
-.kisi-kart header em {
+.kisi-ust {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.kisi-ust strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.kisi-olcu {
+  flex: none;
+  color: var(--murekkep);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.kisi-olcu b {
+  font-family: var(--baslik);
+  font-size: 1.2rem;
+  font-weight: 550;
+}
+
+.kisi-olcu em {
   color: var(--soluk);
-  font-size: 0.8rem;
   font-style: normal;
 }
 
-.kisi-kart.sessiz header em {
+.kisi-kart.sessiz .kisi-olcu em {
   color: var(--kil);
+  font-weight: 650;
+}
+
+.cetvel-dugme {
+  display: grid;
+  width: 2.15rem;
+  height: 2.15rem;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0.7rem;
+  background: var(--yosun-acik);
+  color: var(--yosun);
+  cursor: pointer;
+}
+
+.cetvel-dugme svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.cetvel-dugme svg circle {
+  fill: currentColor;
+  stroke: none;
+}
+
+.cetvel-dugme.acik {
+  background: var(--yosun);
+  color: #f4f7f2;
+}
+
+.ogrenci-cetvel {
+  margin-top: 0.75rem;
+}
+
+.cetvel-aralik {
+  margin: 0 0 0.45rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  background: var(--yosun);
+  color: #f4f7f2;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: right;
+  width: fit-content;
+  margin-left: auto;
+}
+
+.cetvel-kaydir {
+  overflow-x: auto;
+}
+
+.cetvel-tablo {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.cetvel-tablo th,
+.cetvel-tablo td {
+  padding: 0.32rem 0.2rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.cetvel-tablo thead th {
+  color: var(--soluk);
+  font-size: 0.64rem;
   font-weight: 600;
+}
+
+.cetvel-tablo thead b,
+.cetvel-tablo thead small {
+  display: block;
+}
+
+.cetvel-tablo tbody th {
+  text-align: left;
+  color: var(--murekkep);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cetvel-tablo td {
+  color: #c3baad;
+}
+
+.cetvel-tablo td.dolu {
+  color: var(--murekkep);
+  font-weight: 650;
+}
+
+.cetvel-tablo .bugun {
+  background: var(--yosun-acik);
+}
+
+.cetvel-toplam th,
+.cetvel-toplam td {
+  border-top: 1px solid var(--cizgi);
+  font-weight: 700;
 }
 
 .kisi-sayilar {

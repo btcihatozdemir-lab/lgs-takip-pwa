@@ -1,41 +1,48 @@
 <script setup>
-import { DERSLER, netYazi } from '../lib/dersler'
+import { DERSLER } from '../lib/dersler'
 
 defineProps({
   rapor: { type: Object, required: true },
 })
 
-function hucre(gun, kod, alan) {
-  const deger = gun.dersler[kod][alan]
-  return alan === 'net' ? netYazi(deger) : deger
+const HAFTA = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt']
+
+function haftaAdi(iso) {
+  const [yil, ay, gun] = iso.split('-').map(Number)
+  return HAFTA[new Date(Date.UTC(yil, ay - 1, gun)).getUTCDay()]
+}
+
+function hucre(gun, kod) {
+  const soru = gun.dersler[kod].soru
+  return soru ? soru : '·'
 }
 </script>
 
 <template>
-  <section class="kutu cetvel-kutu">
-    <div class="bolum-baslik">
-      <h2>{{ rapor.adSoyad }}</h2>
-      <span class="soluk">{{ rapor.baslangic }} – {{ rapor.bitis }}</span>
+  <section class="ogrenci-cetvel">
+    <p class="cetvel-aralik">{{ rapor.baslangic }} – {{ rapor.bitis }}</p>
+    <div class="cetvel-kaydir">
+      <table class="cetvel-tablo">
+        <thead>
+          <tr>
+            <th></th>
+            <th v-for="gun in rapor.gunler" :key="gun.tarih" :class="{ bugun: gun.tarih === rapor.bitis }">
+              <b>{{ haftaAdi(gun.tarih) }}</b>
+              <small>{{ gun.kisa }}</small>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="ders in DERSLER" :key="ders.kod">
+            <th>{{ ders.ad }}</th>
+            <td v-for="gun in rapor.gunler" :key="gun.tarih" :class="{ dolu: gun.dersler[ders.kod].soru, bugun: gun.tarih === rapor.bitis }">{{ hucre(gun, ders.kod) }}</td>
+          </tr>
+          <tr class="cetvel-toplam">
+            <th>Soru</th>
+            <td v-for="gun in rapor.gunler" :key="gun.tarih" :class="{ dolu: gun.soru, bugun: gun.tarih === rapor.bitis }">{{ gun.soru || '·' }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <div class="sayi-serit cetvel-ozet">
-      <article class="sayi-kart"><em>Toplam soru</em><strong>{{ rapor.toplamSoru }}</strong></article>
-      <article class="sayi-kart"><em>Toplam net</em><strong>{{ rapor.netYazi }}</strong></article>
-      <article class="sayi-kart"><em>Başarı</em><strong>% {{ rapor.basariYazi }}</strong></article>
-      <article class="sayi-kart"><em>7 gün ort.</em><strong>{{ rapor.ortalamaYazi }}</strong></article>
-      <article class="sayi-kart"><em>Sayfa</em><strong>{{ rapor.toplamSayfa }}</strong></article>
-    </div>
-    <article v-for="gun in rapor.gunler" :key="gun.tarih" class="gun-kart">
-      <header>
-        <strong>{{ gun.kisa }} {{ gun.uzun }}</strong>
-        <span>{{ gun.soru }} soru · {{ netYazi(gun.net) }} net</span>
-      </header>
-      <ul>
-        <li v-for="ders in DERSLER" :key="ders.kod">
-          <b>{{ ders.ad }}</b>
-          <span>{{ hucre(gun, ders.kod, 'dogru') }} doğru · {{ hucre(gun, ders.kod, 'yanlis') }} yanlış · {{ hucre(gun, ders.kod, 'net') }} net</span>
-        </li>
-      </ul>
-      <footer>Deneme {{ gun.deneme ? 'Evet' : 'Hayır' }} · {{ gun.sayfa }} sayfa</footer>
-    </article>
   </section>
 </template>
