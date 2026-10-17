@@ -166,6 +166,11 @@ async function kopyala() {
   toast.basari('Davet bağlantısı kopyalandı.')
 }
 
+async function koduKopyala() {
+  await navigator.clipboard.writeText(kart.value?.davet_kodu || '')
+  toast.basari('Davet kodu kopyalandı.')
+}
+
 async function onayla(ogrenci) {
   try {
     const alanlar = { onay_durumu: true }
@@ -279,11 +284,20 @@ onMounted(async () => {
 
     <main v-else-if="kart" class="ogretmen-govde">
       <section class="davet-serit">
-        <p>
-          <small>Öğrenci davet bağlantısı</small>
-          <strong>{{ baglantiKisa }}</strong>
-        </p>
-        <button type="button" class="beyaz-dugme" @click="kopyala">Bağlantıyı kopyala</button>
+        <div class="davet-satir">
+          <p>
+            <small>Öğrenci davet bağlantısı</small>
+            <strong>{{ baglantiKisa }}</strong>
+          </p>
+          <button type="button" class="beyaz-dugme" @click="kopyala">Bağlantıyı kopyala</button>
+        </div>
+        <div class="davet-satir">
+          <p>
+            <small>Davet kodu</small>
+            <strong>{{ kart.davet_kodu }}</strong>
+          </p>
+          <button type="button" class="beyaz-dugme" @click="koduKopyala">Kodu kopyala</button>
+        </div>
       </section>
 
       <div class="masa">
