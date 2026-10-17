@@ -268,6 +268,17 @@ export async function dersOzet(okulId) {
   return sor('ders_ozet', { p_okul: okulId })
 }
 
+export async function dersKademeOzet({ il, ilce = null, okulId = null, alt, ust }) {
+  const sonuc = await sor('ders_kademe_ozet', {
+    p_il: il,
+    p_ilce: ilce,
+    p_okul: okulId,
+    p_alt: alt,
+    p_ust: ust,
+  })
+  return sonuc || []
+}
+
 export async function kademeOzet({ il, ilce = null, okulId = null, alt, ust }) {
   const sonuc = await sor('kademe_ozet', {
     p_il: il,

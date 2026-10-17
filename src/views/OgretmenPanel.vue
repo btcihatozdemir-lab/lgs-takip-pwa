@@ -10,7 +10,7 @@ import { davetBaglantisi, isoGun } from '../lib/dersler'
 import { istanbulGunu, raporHazirla, tarihEkle } from '../../supabase/functions/haftalik-posta/raporVerisi.js'
 import {
   aralikKayitlari,
-  dersOzet,
+  dersKademeOzet,
   kademeOzet,
   kayitTarihleri,
   liderlik,
@@ -35,7 +35,16 @@ const okul = ref(null)
 const bolge = ref(null)
 const ilOzet = ref(null)
 const kademe = ref(KADEMELER[1])
-const dersler = ref([])
+const dersOkul = ref([])
+const dersIlce = ref([])
+const dersIl = ref([])
+const DERS_ADLARI = ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce']
+const dersKarsilastirma = computed(() => DERS_ADLARI.map((ad) => ({
+  ad,
+  okul: dersOkul.value.find((ders) => ders.ders === ad),
+  ilce: dersIlce.value.find((ders) => ders.ders === ad),
+  il: dersIl.value.find((ders) => ders.ders === ad),
+})))
 const sira = ref([])
 const olcut = ref('soru')
 const seciliSinif = ref('')
@@ -65,7 +74,6 @@ const baglantiKisa = computed(() => {
   const adres = new URL(baglanti.value)
   return `${adres.host}${adres.pathname}${adres.search}`
 })
-const dersTavan = computed(() => Math.max(1, ...dersler.value.map((ders) => Number(ders.soru) || 0)))
 const sinifSecenekleri = computed(() => {
   const siniflar = ogrenciler.value
     .filter((ogrenci) => ogrenci.onay_durumu)
@@ -127,6 +135,11 @@ function sonYediGun() {
   return { baslangic: tarihEkle(bitis, -6), bitis }
 }
 
+function olcuYazi(satir) {
+  if (!satir) return '—'
+  return `${satir.soru} soru - ${satir.net} net - Başarı %${satir.basari}`
+}
+
 function yakinYazi(fark) {
   if (fark == null) return 'Hiç yok'
   if (fark <= 0) return 'Bugün'
@@ -152,11 +165,13 @@ async function yukle() {
   listeAraligi.value = sonYediGun()
   kademe.value = kademeSec(ogrenciler.value, kart.value.okullar?.okul_adi)
   const ortak = { il: kart.value.okullar?.il, alt: kademe.value.alt, ust: kademe.value.ust }
-  const [okulSonuc, bolgeSonuc, ilSonuc, dersSonuc, tarihler, gecen] = await Promise.all([
+  const [okulSonuc, bolgeSonuc, ilSonuc, dersOkulSonuc, dersIlceSonuc, dersIlSonuc, tarihler, gecen] = await Promise.all([
     kademeOzet({ ...ortak, okulId: kart.value.okul_id }),
     kademeOzet({ ...ortak, ilce: kart.value.okullar?.ilce }),
     kademeOzet(ortak),
-    dersOzet(kart.value.okul_id),
+    dersKademeOzet({ ...ortak, okulId: kart.value.okul_id }),
+    dersKademeOzet({ ...ortak, ilce: kart.value.okullar?.ilce }),
+    dersKademeOzet(ortak),
     kayitTarihleri(onayliIdler),
     aralikKayitlari(onayliIdler, listeAraligi.value.baslangic, listeAraligi.value.bitis),
   ])
@@ -170,7 +185,9 @@ async function yukle() {
   okul.value = okulSonuc
   bolge.value = bolgeSonuc
   ilOzet.value = ilSonuc
-  dersler.value = dersSonuc || []
+  dersOkul.value = dersOkulSonuc || []
+  dersIlce.value = dersIlceSonuc || []
+  dersIl.value = dersIlSonuc || []
   if (!sinifSecenekleri.value.includes(seciliSinif.value)) seciliSinif.value = sinifSecenekleri.value[0] || ''
   await sirayiGetir()
 }
@@ -435,15 +452,21 @@ onMounted(async () => {
           </div>
 
           <div class="kutu" style="margin-top: 0.9rem;">
-            <div class="bolum-baslik"><h2>Ders ders</h2><span class="soluk">Son 7 gün</span></div>
-            <div v-if="dersler.length" class="ders-cubuklari">
-              <div v-for="ders in dersler" :key="ders.ders" class="ders-olcu">
-                <span>{{ ders.ders }}</span>
-                <span class="olcu-iz"><span class="olcu-dolu" :style="{ width: `${(Number(ders.soru) / dersTavan) * 100}%` }" /></span>
-                <span class="soluk">{{ ders.soru }}</span>
+            <div class="bolum-baslik"><h2>Ders ders</h2><span class="soluk">{{ kademe.ad }} · son 7 gün</span></div>
+            <article v-for="ders in dersKarsilastirma" :key="ders.ad" class="ders-karsilastirma">
+              <div class="ders-okul">
+                <strong>{{ ders.ad }}</strong>
+                <span>{{ olcuYazi(ders.okul) }}</span>
               </div>
-            </div>
-            <p v-else class="bos">Ders özeti kayıt geldikçe dolar.</p>
+              <div class="ders-karsit">
+                <em>İlçe ort.</em>
+                <span>{{ olcuYazi(ders.ilce) }}</span>
+              </div>
+              <div class="ders-karsit">
+                <em>İl ort.</em>
+                <span>{{ olcuYazi(ders.il) }}</span>
+              </div>
+            </article>
           </div>
 
           <div class="bolum-baslik" style="margin-top: 1.2rem;">

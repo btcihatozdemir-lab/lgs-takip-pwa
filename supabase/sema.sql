@@ -330,6 +330,63 @@ $$;
 
 grant execute on function public.kademe_ozet(text, text, uuid, int, int) to authenticated;
 
+create or replace function public.ders_kademe_ozet(p_il text, p_ilce text, p_okul uuid, p_alt int, p_ust int)
+returns table (ders text, soru numeric, net numeric, basari numeric)
+language sql stable security definer set search_path = public as $$
+  with pencere as (
+    select (timezone('Europe/Istanbul', now()))::date as bitis,
+           (timezone('Europe/Istanbul', now()))::date - 6 as baslangic
+  ),
+  g as (
+    select gunluk_kayitlar.*
+    from gunluk_kayitlar
+    join ogrenciler o on o.id = gunluk_kayitlar.ogrenci_id
+    join okullar k on k.id = o.okul_id
+    cross join pencere p
+    where o.onay_durumu is true
+      and k.il = p_il
+      and (p_ilce is null or p_ilce = '' or k.ilce = p_ilce)
+      and (p_okul is null or o.okul_id = p_okul)
+      and o.sinif between p_alt and p_ust
+      and gunluk_kayitlar.tarih >= p.baslangic
+      and gunluk_kayitlar.tarih <= p.bitis
+  )
+  select * from (
+    select 'Türkçe' ders,
+      round(coalesce(sum(turkce_soru), 0) / 7.0, 1),
+      trunc(coalesce(sum(turkce_dogru - turkce_yanlis / 4.0), 0) / 7.0, 2),
+      case when coalesce(sum(turkce_soru), 0) = 0 then 0 else trunc(sum(turkce_dogru)::numeric / sum(turkce_soru) * 100, 1) end
+    from g
+    union all select 'Matematik',
+      round(coalesce(sum(matematik_soru), 0) / 7.0, 1),
+      trunc(coalesce(sum(matematik_dogru - matematik_yanlis / 4.0), 0) / 7.0, 2),
+      case when coalesce(sum(matematik_soru), 0) = 0 then 0 else trunc(sum(matematik_dogru)::numeric / sum(matematik_soru) * 100, 1) end
+    from g
+    union all select 'Fen',
+      round(coalesce(sum(fen_soru), 0) / 7.0, 1),
+      trunc(coalesce(sum(fen_dogru - fen_yanlis / 4.0), 0) / 7.0, 2),
+      case when coalesce(sum(fen_soru), 0) = 0 then 0 else trunc(sum(fen_dogru)::numeric / sum(fen_soru) * 100, 1) end
+    from g
+    union all select 'İnkılap',
+      round(coalesce(sum(inkilap_soru), 0) / 7.0, 1),
+      trunc(coalesce(sum(inkilap_dogru - inkilap_yanlis / 4.0), 0) / 7.0, 2),
+      case when coalesce(sum(inkilap_soru), 0) = 0 then 0 else trunc(sum(inkilap_dogru)::numeric / sum(inkilap_soru) * 100, 1) end
+    from g
+    union all select 'Din',
+      round(coalesce(sum(din_soru), 0) / 7.0, 1),
+      trunc(coalesce(sum(din_dogru - din_yanlis / 4.0), 0) / 7.0, 2),
+      case when coalesce(sum(din_soru), 0) = 0 then 0 else trunc(sum(din_dogru)::numeric / sum(din_soru) * 100, 1) end
+    from g
+    union all select 'İngilizce',
+      round(coalesce(sum(ingilizce_soru), 0) / 7.0, 1),
+      trunc(coalesce(sum(ingilizce_dogru - ingilizce_yanlis / 4.0), 0) / 7.0, 2),
+      case when coalesce(sum(ingilizce_soru), 0) = 0 then 0 else trunc(sum(ingilizce_dogru)::numeric / sum(ingilizce_soru) * 100, 1) end
+    from g
+  ) d
+$$;
+
+grant execute on function public.ders_kademe_ozet(text, text, uuid, int, int) to authenticated;
+
 drop policy if exists lgs_okul_ogretmen_guncelle on public.okullar;
 create policy lgs_okul_ogretmen_guncelle on public.okullar
   for update using (

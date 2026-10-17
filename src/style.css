@@ -1057,6 +1057,49 @@ input[type='number'] {
   font-size: 0.78rem;
 }
 
+.ders-karsilastirma + .ders-karsilastirma {
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--cizgi);
+}
+
+.ders-okul,
+.ders-karsit {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.ders-okul strong {
+  font-size: 0.98rem;
+}
+
+.ders-okul span,
+.ders-karsit span {
+  text-align: right;
+}
+
+.ders-okul span {
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.ders-karsit {
+  margin-top: 0.18rem;
+  padding-left: 0.85rem;
+  color: var(--soluk);
+  font-size: 0.78rem;
+}
+
+.ders-karsit em {
+  font-style: normal;
+}
+
+.ders-karsit span {
+  color: var(--murekkep);
+}
+
 .ders-cubuklari {
   display: grid;
   gap: 0.7rem;
