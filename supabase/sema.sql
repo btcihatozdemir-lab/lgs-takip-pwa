@@ -380,6 +380,62 @@ $$;
 
 grant execute on function public.ders_kademe_ozet(text, text, uuid, int, int) to authenticated;
 
+create or replace function public.liderlik_danisman(p_il text, p_olcut text, p_sinif int, p_alt int, p_ust int)
+returns table (ogrenci_id uuid, ad_soyad text, rumuz text, okul text, sinif int, deger numeric, sira int, toplam int, benim boolean)
+language sql stable security definer set search_path = public as $$
+  with aday as (
+    select o.id, o.ad_soyad, o.rumuz, k.okul_adi, o.sinif::int as sinif, o.danisman_id
+    from ogrenciler o
+    join okullar k on k.id = o.okul_id
+    where o.onay_durumu is true
+      and k.il = p_il
+      and (
+        (p_sinif is not null and o.sinif = p_sinif)
+        or (p_sinif is null and o.sinif between p_alt and p_ust)
+      )
+  ),
+  zaman as (
+    select (timezone('Europe/Istanbul', now()))::date as bugun
+  ),
+  sinir as (
+    select bugun,
+      bugun - (extract(isodow from bugun)::int - 1) as hafta_basi,
+      date_trunc('month', bugun)::date as ay_basi
+    from zaman
+  ),
+  puan as (
+    select a.id, a.ad_soyad, a.rumuz, a.okul_adi, a.sinif, a.danisman_id,
+      case p_olcut
+        when 'kitap' then (
+          select count(*) from kitaplar b, sinir z
+          where b.ogrenci_id = a.id and b.bitti_tarihi >= z.ay_basi
+        )::numeric
+        when 'net' then coalesce((
+          select sum(gun_net(g)) from gunluk_kayitlar g, sinir z
+          where g.ogrenci_id = a.id and g.tarih >= z.hafta_basi and g.tarih <= z.bugun
+        ), 0)
+        else coalesce((
+          select sum(gun_soru(g)) from gunluk_kayitlar g, sinir z
+          where g.ogrenci_id = a.id and g.tarih >= z.hafta_basi and g.tarih <= z.bugun
+        ), 0)
+      end as deger
+    from aday a
+  ),
+  sirali as (
+    select p.id, p.ad_soyad, p.rumuz, p.okul_adi, p.sinif, p.danisman_id, p.deger,
+      row_number() over (order by p.deger desc, p.rumuz)::int as sira,
+      count(*) over ()::int as toplam
+    from puan p
+  )
+  select s.id, s.ad_soyad, s.rumuz, s.okul_adi, s.sinif, s.deger, s.sira, s.toplam,
+         s.danisman_id = auth.uid()
+  from sirali s
+  where s.sira <= 10 or s.danisman_id = auth.uid()
+  order by s.sira
+$$;
+
+grant execute on function public.liderlik_danisman(text, text, int, int, int) to authenticated;
+
 drop policy if exists lgs_okul_ogretmen_guncelle on public.okullar;
 create policy lgs_okul_ogretmen_guncelle on public.okullar
   for update using (

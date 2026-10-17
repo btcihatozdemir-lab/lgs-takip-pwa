@@ -8,6 +8,8 @@ const props = defineProps({
   benimOkul: { type: String, default: '' },
   olcut: { type: String, default: 'soru' },
   baslik: { type: String, default: 'Sıralama' },
+  disariListe: { type: Boolean, default: false },
+  adGoster: { type: Boolean, default: false },
 })
 
 const ETIKET = { soru: 'Soru', net: 'Net', kitap: 'Kitap' }
@@ -22,6 +24,16 @@ const aralik = computed(() => {
   return 'Bu hafta çözülen sorular.'
 })
 const disarida = computed(() => props.kisiler.find((kisi) => kisi.ogrenci_id === props.benimId && Number(kisi.sira) > 10) || null)
+const disaridakiler = computed(() => {
+  if (props.disariListe) return props.kisiler.filter((kisi) => Number(kisi.sira) > 10)
+  return disarida.value ? [disarida.value] : []
+})
+
+function gorunenAd(kisi) {
+  if (!props.adGoster) return kisi.rumuz
+  const ad = kisi.ad_soyad || kisi.rumuz || ''
+  return kisi.sinif ? `${ad}(${kisi.sinif})` : ad
+}
 
 function harf(ad) {
   return (ad || '?').trim().charAt(0).toLocaleUpperCase('tr-TR')
@@ -54,30 +66,30 @@ function madalya(sira) {
     <p class="pano-ozet">{{ aralik }}</p>
     <p v-if="toplam" class="pano-ozet">
       İlk 10 kişi sıralanır.
-      <template v-if="benim"> {{ toplam }} öğrenci arasında {{ benim.sira }}. sıradasınız.</template>
+      <template v-if="benim && !disariListe"> {{ toplam }} öğrenci arasında {{ benim.sira }}. sıradasınız.</template>
     </p>
     <ol class="pano-liste">
-      <li v-for="kisi in ilkOn" :key="kisi.ogrenci_id" class="pano-satir" :class="{ 'benim-ic': kisi.ogrenci_id === benimId }">
+      <li v-for="kisi in ilkOn" :key="kisi.ogrenci_id" class="pano-satir" :class="{ 'benim-ic': kisi.benim || kisi.ogrenci_id === benimId }">
         <span v-if="madalya(kisi.sira)" class="madalya" :class="madalya(kisi.sira)">{{ kisi.sira }}</span>
         <span v-else class="sira-duz">{{ kisi.sira }}</span>
-        <span class="pano-avatar" :style="{ background: renk(kisi.rumuz) }">{{ harf(kisi.rumuz) }}</span>
+        <span class="pano-avatar" :style="{ background: renk(gorunenAd(kisi)) }">{{ harf(gorunenAd(kisi)) }}</span>
         <span class="pano-kim">
-          <strong>{{ kisi.rumuz }}</strong>
+          <strong>{{ gorunenAd(kisi) }}</strong>
           <small v-if="okulYazi(kisi)">{{ okulYazi(kisi) }}</small>
         </span>
         <span class="pano-puan">{{ puan(kisi) }}<small>{{ ETIKET[olcut] }}</small></span>
       </li>
     </ol>
-    <div v-if="disarida" class="pano-ayrik">
-      <p>İlk 10'un dışındasın</p>
-      <div class="pano-satir disarida">
-        <span class="sira-duz">{{ disarida.sira }}</span>
-        <span class="pano-avatar" :style="{ background: renk(disarida.rumuz) }">{{ harf(disarida.rumuz) }}</span>
+    <div v-if="disaridakiler.length" class="pano-ayrik">
+      <p v-if="!disariListe">İlk 10'un dışındasın</p>
+      <div v-for="kisi in disaridakiler" :key="kisi.ogrenci_id" class="pano-satir disarida">
+        <span class="sira-duz">{{ kisi.sira }}</span>
+        <span class="pano-avatar" :style="{ background: renk(gorunenAd(kisi)) }">{{ harf(gorunenAd(kisi)) }}</span>
         <span class="pano-kim">
-          <strong>{{ disarida.rumuz }}</strong>
-          <small v-if="okulYazi(disarida)">{{ okulYazi(disarida) }}</small>
+          <strong>{{ gorunenAd(kisi) }}</strong>
+          <small v-if="okulYazi(kisi)">{{ okulYazi(kisi) }}</small>
         </span>
-        <span class="pano-puan">{{ puan(disarida) }}<small>{{ ETIKET[olcut] }}</small></span>
+        <span class="pano-puan">{{ puan(kisi) }}<small>{{ ETIKET[olcut] }}</small></span>
       </div>
     </div>
   </section>

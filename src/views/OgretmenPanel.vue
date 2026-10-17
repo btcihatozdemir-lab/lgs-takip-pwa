@@ -13,7 +13,7 @@ import {
   dersKademeOzet,
   kademeOzet,
   kayitTarihleri,
-  liderlik,
+  liderlikDanisman,
   ogretmenBilgisiGuncelle,
   ogretmenKart,
   ogrenciBilgisiGuncelle,
@@ -46,6 +46,7 @@ const dersKarsilastirma = computed(() => DERS_ADLARI.map((ad) => ({
   il: dersIl.value.find((ders) => ders.ders === ad),
 })))
 const sira = ref([])
+const siraSekme = ref('ogrencilerim')
 const olcut = ref('soru')
 const seciliSinif = ref('')
 const adSoyad = ref('')
@@ -74,12 +75,14 @@ const baglantiKisa = computed(() => {
   const adres = new URL(baglanti.value)
   return `${adres.host}${adres.pathname}${adres.search}`
 })
-const sinifSecenekleri = computed(() => {
-  const siniflar = ogrenciler.value
-    .filter((ogrenci) => ogrenci.onay_durumu)
-    .map((ogrenci) => String(ogrenci.sinif))
-    .filter(Boolean)
-  return [...new Set(siniflar)].sort((a, b) => Number(a) - Number(b))
+const danismanSiniflari = computed(() => {
+  const siniflar = onaylilar.value.map((ogrenci) => Number(ogrenci.sinif)).filter((sinif) => sinif >= 1)
+  return [...new Set(siniflar)].sort((a, b) => a - b)
+})
+const siraBaslik = computed(() => {
+  const il = kart.value?.okullar?.il || 'İl'
+  if (siraSekme.value === 'genel') return `${il} · ${kademe.value.ad} · bu hafta`
+  return `${il} · ${seciliSinif.value}. sınıf · bu hafta`
 })
 const bekleyenler = computed(() => ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu === false))
 const onaylilar = computed(() => ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu === true && ogrenci.danisman_id === kart.value?.id))
@@ -204,17 +207,44 @@ async function yukle() {
   dersOkul.value = dersOkulSonuc || []
   dersIlce.value = dersIlceSonuc || []
   dersIl.value = dersIlSonuc || []
-  if (!sinifSecenekleri.value.includes(seciliSinif.value)) seciliSinif.value = sinifSecenekleri.value[0] || ''
+  const siniflar = danismanSiniflari.value.map(String)
+  if (!siniflar.includes(String(seciliSinif.value))) seciliSinif.value = siniflar[0] || ''
   await sirayiGetir()
 }
 
 async function sirayiGetir() {
   const il = kart.value?.okullar?.il
-  if (!seciliSinif.value || !il) {
+  if (!il) {
     sira.value = []
     return
   }
-  sira.value = (await liderlik(seciliSinif.value, il, olcut.value)) || []
+  if (siraSekme.value === 'genel') {
+    sira.value = await liderlikDanisman({
+      il,
+      olcut: olcut.value,
+      alt: kademe.value.alt,
+      ust: kademe.value.ust,
+    })
+    return
+  }
+  if (!seciliSinif.value) {
+    sira.value = []
+    return
+  }
+  sira.value = await liderlikDanisman({
+    il,
+    olcut: olcut.value,
+    sinif: Number(seciliSinif.value),
+  })
+}
+
+async function siraSekmesi(ad) {
+  siraSekme.value = ad
+  try {
+    await sirayiGetir()
+  } catch (hata) {
+    toast.hata(hata.message || 'Sıra alınamadı.')
+  }
 }
 
 async function kopyala() {
@@ -491,14 +521,18 @@ onMounted(async () => {
           <div class="bolum-baslik" style="margin-top: 1.2rem;">
             <h2>İl sırası</h2>
           </div>
-          <div v-if="sinifSecenekleri.length" class="parca">
-            <button v-for="sinif in sinifSecenekleri" :key="sinif" type="button" :class="{ secili: seciliSinif === sinif }" @click="sinifSec(sinif)">{{ sinif }}. sınıf</button>
+          <div class="sira-sekme">
+            <button type="button" :class="{ secili: siraSekme === 'ogrencilerim' }" @click="siraSekmesi('ogrencilerim')">Öğrencilerim</button>
+            <button type="button" :class="{ secili: siraSekme === 'genel' }" @click="siraSekmesi('genel')">Genel</button>
           </div>
-          <div class="parca">
+          <div v-if="siraSekme === 'ogrencilerim' && danismanSiniflari.length" class="parca">
+            <button v-for="sinif in danismanSiniflari" :key="sinif" type="button" :class="{ secili: String(seciliSinif) === String(sinif) }" @click="sinifSec(String(sinif))">{{ sinif }}. sınıf</button>
+          </div>
+          <p v-else-if="siraSekme === 'ogrencilerim'" class="bos">Danışmanı olduğun öğrenci yok.</p>
+          <div v-if="siraSekme === 'genel' || seciliSinif" class="parca">
             <button v-for="secenek in [{ id: 'soru', ad: 'Soru' }, { id: 'net', ad: 'Net' }, { id: 'kitap', ad: 'Kitap' }]" :key="secenek.id" type="button" :class="{ secili: olcut === secenek.id }" @click="olcutSec(secenek.id)">{{ secenek.ad }}</button>
           </div>
-          <Liderlik v-if="seciliSinif" :kisiler="sira" :olcut="olcut" :baslik="`${kart.okullar?.il || 'İl'} · ${seciliSinif}. sınıf · bu hafta`" />
-          <p v-else class="bos">Okulda onaylı öğrenci yok.</p>
+          <Liderlik v-if="siraSekme === 'genel' || seciliSinif" :kisiler="sira" :olcut="olcut" :baslik="siraBaslik" disari-liste :ad-goster="siraSekme === 'genel'" />
         </div>
       </div>
 

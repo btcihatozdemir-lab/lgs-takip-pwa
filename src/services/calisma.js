@@ -164,6 +164,17 @@ export async function liderlik(sinif, il, olcut) {
   return sor('liderlik', { p_sinif: String(sinif), p_il: il, p_olcut: olcut })
 }
 
+export async function liderlikDanisman({ il, olcut, sinif = null, alt = null, ust = null }) {
+  const sonuc = await sor('liderlik_danisman', {
+    p_il: il,
+    p_olcut: olcut,
+    p_sinif: sinif,
+    p_alt: alt,
+    p_ust: ust,
+  })
+  return sonuc || []
+}
+
 export async function danismaniBul(kod) {
   const { data, error } = await supabase
     .from('ogretmenler')
