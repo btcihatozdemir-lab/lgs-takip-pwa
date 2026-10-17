@@ -84,6 +84,7 @@ async function yukle() {
     cetelAlicilari(kart.value.id),
   ])
   bugun.value = gunKaydi.kayit
+  if (!gunKaydi.kayit?.id) dersKutulariniBosalt()
   gunler.value = hafta
   aylar.value = ay || []
   ogretmenler.value = hocalar
@@ -96,15 +97,70 @@ async function sirayiGetir() {
   sira.value = (await liderlik(kart.value.sinif, kart.value.okullar.il, siralamaOlcut.value)) || []
 }
 
+function dersKutulariniBosalt() {
+  for (const ders of DERSLER) {
+    bugun.value[`${ders.kod}_soru`] = ''
+    bugun.value[`${ders.kod}_dogru`] = ''
+    bugun.value[`${ders.kod}_yanlis`] = ''
+  }
+}
+
+function sayiOku(deger) {
+  if (deger === '' || deger == null) return null
+  return Number(deger)
+}
+
+function sayiYazi(deger) {
+  return deger === '' || deger == null ? '' : String(deger)
+}
+
+function dogruEksik(kod) {
+  return sayiOku(bugun.value[`${kod}_soru`]) > 0 && sayiOku(bugun.value[`${kod}_dogru`]) == null
+}
+
+function kaydiDenetle() {
+  const eksik = []
+  const tasan = []
+  for (const ders of DERSLER) {
+    const soru = sayiOku(bugun.value[`${ders.kod}_soru`]) ?? 0
+    const dogru = sayiOku(bugun.value[`${ders.kod}_dogru`])
+    const yanlis = sayiOku(bugun.value[`${ders.kod}_yanlis`]) ?? 0
+    if (soru > 0 && dogru == null) eksik.push(ders.ad)
+    else if (soru > 0 && dogru + yanlis > soru) tasan.push(ders.ad)
+  }
+  if (eksik.length) {
+    toast.hata(`${eksik.join(', ')} için doğru sayısını yaz. Yanlış boş kalabilir.`)
+    return false
+  }
+  if (tasan.length) {
+    toast.hata(`${tasan.join(', ')} için doğru ve yanlış, soru sayısını geçemez.`)
+    return false
+  }
+  return true
+}
+
+function sayiyaCevir(kayit) {
+  const satir = { ...kayit }
+  for (const ders of DERSLER) {
+    for (const tur of ['soru', 'dogru', 'yanlis']) {
+      const alan = `${ders.kod}_${tur}`
+      satir[alan] = sayiOku(satir[alan]) ?? 0
+    }
+  }
+  satir.kitap_sayfa = sayiOku(satir.kitap_sayfa) ?? 0
+  return satir
+}
+
 async function kaydet() {
   if (kaydediyor.value || !kart.value) return
   if (bugun.value.kitap_bitti && !String(bugun.value.kitap_adi || '').trim()) {
     toast.hata('Kitabı bitirdiysen adını yaz.')
     return
   }
+  if (!kaydiDenetle()) return
   kaydediyor.value = true
   try {
-    await bugunuKaydet(kart.value.id, bugun.value)
+    await bugunuKaydet(kart.value.id, sayiyaCevir(bugun.value))
     if (bugun.value.kitap_bitti) await kitapEkle(kart.value.id, bugun.value.kitap_adi, bugun.value.kitap_yorum)
     gunler.value = await sonYediGun(kart.value.id)
     aylar.value = (await aylikOzet(kart.value.id)) || []
@@ -124,7 +180,7 @@ function rakamDisiniEngelle(olay) {
 function rakamYaz(olay, alan) {
   const rakam = olay.target.value.replace(/\D/g, '')
   olay.target.value = rakam
-  bugun.value[alan] = rakam === '' ? 0 : Number(rakam)
+  bugun.value[alan] = rakam === '' ? '' : Number(rakam)
 }
 
 function danismaniDahilEt(idler) {
@@ -244,9 +300,9 @@ onMounted(async () => {
           </div>
           <div v-for="ders in DERSLER" :key="ders.kod" class="cetvel-satir">
             <span class="ders-ad"><i class="ders-nokta" :style="{ background: ders.renk }" />{{ ders.ad }}</span>
-            <input :value="bugun[`${ders.kod}_soru`]" :aria-label="`${ders.ad} soru`" inputmode="numeric" autocomplete="off" class="sayi-kutu" @beforeinput="rakamDisiniEngelle" @input="rakamYaz($event, `${ders.kod}_soru`)" />
-            <input :value="bugun[`${ders.kod}_dogru`]" :aria-label="`${ders.ad} doğru`" inputmode="numeric" autocomplete="off" class="sayi-kutu" @beforeinput="rakamDisiniEngelle" @input="rakamYaz($event, `${ders.kod}_dogru`)" />
-            <input :value="bugun[`${ders.kod}_yanlis`]" :aria-label="`${ders.ad} yanlış`" inputmode="numeric" autocomplete="off" class="sayi-kutu" @beforeinput="rakamDisiniEngelle" @input="rakamYaz($event, `${ders.kod}_yanlis`)" />
+            <input :value="sayiYazi(bugun[`${ders.kod}_soru`])" :aria-label="`${ders.ad} soru`" inputmode="numeric" autocomplete="off" class="sayi-kutu" @beforeinput="rakamDisiniEngelle" @input="rakamYaz($event, `${ders.kod}_soru`)" />
+            <input :value="sayiYazi(bugun[`${ders.kod}_dogru`])" :aria-label="`${ders.ad} doğru`" inputmode="numeric" autocomplete="off" class="sayi-kutu" :class="{ eksik: dogruEksik(ders.kod) }" @beforeinput="rakamDisiniEngelle" @input="rakamYaz($event, `${ders.kod}_dogru`)" />
+            <input :value="sayiYazi(bugun[`${ders.kod}_yanlis`])" :aria-label="`${ders.ad} yanlış`" inputmode="numeric" autocomplete="off" class="sayi-kutu" @beforeinput="rakamDisiniEngelle" @input="rakamYaz($event, `${ders.kod}_yanlis`)" />
           </div>
         </div>
 

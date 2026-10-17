@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted, onUnmounted, ref } from 'vue'
 import { toastDurumu, toastKapat } from '../services/toast'
 
 const siniflar = {
@@ -7,14 +8,40 @@ const siniflar = {
   uyari: 'border-amber-200 bg-amber-50 text-amber-950',
   bilgi: 'border-slate-200 bg-white text-slate-800',
 }
+
+const alt = ref(16)
+let boyut
+let degisim
+
+function olc() {
+  const dock = document.querySelector('footer.dock')
+  const gorunur = dock && getComputedStyle(dock).display !== 'none'
+  const yukseklik = gorunur ? Math.ceil(dock.getBoundingClientRect().height) : 0
+  alt.value = yukseklik + 16
+}
+
+onMounted(() => {
+  olc()
+  boyut = new ResizeObserver(olc)
+  boyut.observe(document.body)
+  degisim = new MutationObserver(olc)
+  degisim.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style'] })
+  window.addEventListener('resize', olc)
+})
+
+onUnmounted(() => {
+  boyut?.disconnect()
+  degisim?.disconnect()
+  window.removeEventListener('resize', olc)
+})
 </script>
 
 <template>
-  <div class="pointer-events-none fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 px-4 sm:items-end sm:px-6">
+  <div class="toast-yigin" :style="{ bottom: `${alt}px` }">
     <article
       v-for="bildirim in toastDurumu.bildirimler"
       :key="bildirim.id"
-      class="pointer-events-auto w-full max-w-sm rounded-xl border px-4 py-3 shadow-lg"
+      class="pointer-events-auto w-full rounded-xl border px-4 py-3 shadow-lg"
       :class="siniflar[bildirim.tur] || siniflar.bilgi"
       role="status"
     >

@@ -254,6 +254,23 @@ input[type='number'] {
   background: white;
 }
 
+.sayi-kutu.eksik {
+  outline: 2px solid var(--kil);
+  background: #f8ece6;
+}
+
+.toast-yigin {
+  position: fixed;
+  right: 1rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 0.5rem;
+  width: min(22rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
 .dock {
   position: fixed;
   right: 0;
