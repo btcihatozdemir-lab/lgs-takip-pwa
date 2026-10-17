@@ -12,13 +12,13 @@ const props = defineProps({
   adGoster: { type: Boolean, default: false },
 })
 
-const ETIKET = { soru: 'Soru', net: 'Net', kitap: 'Kitap' }
+const ETIKET = { soru: 'Soru', net: 'Net', kitap: 'Sayfa' }
 
 const ilkOn = computed(() => props.kisiler.filter((kisi) => kisi.sira == null || Number(kisi.sira) <= 10).slice(0, 10))
 const toplam = computed(() => Number(props.kisiler[0]?.toplam || 0))
 const benim = computed(() => props.kisiler.find((kisi) => kisi.ogrenci_id === props.benimId) || null)
 const aralik = computed(() => {
-  if (props.olcut === 'kitap') return 'Bu ay biten kitaplar.'
+  if (props.olcut === 'kitap') return 'Bu hafta okunan sayfa.'
   if (props.olcut === 'net') return 'Bu haftanın neti.'
   return 'Bu hafta çözülen sorular.'
 })

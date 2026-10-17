@@ -86,8 +86,8 @@ function yerAdi(metin) {
 
 const siraBaslik = computed(() => {
   const il = yerAdi(kart.value?.okullar?.il || 'İl')
-  if (siraSekme.value === 'genel') return `${il} · ${kademe.value.ad} · bu hafta`
-  return `${il} · ${seciliSinif.value}. sınıf · bu hafta`
+  if (siraSekme.value === 'genel') return `${il} · ${kademe.value.ad} · Bu hafta`
+  return `${il} · ${seciliSinif.value}. sınıf · Bu hafta`
 })
 const bekleyenler = computed(() => ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu === false))
 const onaylilar = computed(() => ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu === true && ogrenci.danisman_id === kart.value?.id))

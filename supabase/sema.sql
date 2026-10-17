@@ -145,10 +145,10 @@ language sql stable security definer set search_path = public as $$
   puan as (
     select a.id, a.rumuz, a.okul_adi,
       case p_olcut
-        when 'kitap' then (
-          select count(*) from kitaplar b, sinir z
-          where b.ogrenci_id = a.id and b.bitti_tarihi >= z.ay_basi
-        )::numeric
+        when 'kitap' then coalesce((
+          select sum(g.kitap_sayfa) from gunluk_kayitlar g, sinir z
+          where g.ogrenci_id = a.id and g.tarih >= z.hafta_basi and g.tarih <= z.bugun
+        ), 0)
         when 'net' then coalesce((
           select sum(gun_net(g)) from gunluk_kayitlar g, sinir z
           where g.ogrenci_id = a.id and g.tarih >= z.hafta_basi and g.tarih <= z.bugun
@@ -406,10 +406,10 @@ language sql stable security definer set search_path = public as $$
   puan as (
     select a.id, a.ad_soyad, a.rumuz, a.okul_adi, a.sinif, a.danisman_id,
       case p_olcut
-        when 'kitap' then (
-          select count(*) from kitaplar b, sinir z
-          where b.ogrenci_id = a.id and b.bitti_tarihi >= z.ay_basi
-        )::numeric
+        when 'kitap' then coalesce((
+          select sum(g.kitap_sayfa) from gunluk_kayitlar g, sinir z
+          where g.ogrenci_id = a.id and g.tarih >= z.hafta_basi and g.tarih <= z.bugun
+        ), 0)
         when 'net' then coalesce((
           select sum(gun_net(g)) from gunluk_kayitlar g, sinir z
           where g.ogrenci_id = a.id and g.tarih >= z.hafta_basi and g.tarih <= z.bugun
