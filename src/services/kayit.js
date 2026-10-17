@@ -87,21 +87,25 @@ async function oturumuHazirla(eposta, sifre, rol) {
   return kullanici
 }
 
+export function okulAdiAnahtar(ad) {
+  return String(ad || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('tr-TR')
+}
+
 export async function okuluKaydetVeyaGetir(il, ilce, okulAdi) {
-  const okul = { il, ilce, okul_adi: okulAdi }
-  const { data, error } = await supabase.from('okullar').insert(okul).select('id').single()
+  const ad = String(okulAdi || '').trim().replace(/\s+/g, ' ')
+  if (!ad) throw new Error('Okul adı yaz.')
+  const anahtar = okulAdiAnahtar(ad)
+  const liste = await okullariGetir(il, ilce)
+  const mevcut = liste.find((okul) => okulAdiAnahtar(okul.okul_adi) === anahtar)
+  if (mevcut) return mevcut.id
+
+  const { data, error } = await supabase.from('okullar').insert({ il, ilce, okul_adi: ad }).select('id').single()
   if (!error) return data.id
 
-  const mevcut = await supabase
-    .from('okullar')
-    .select('id')
-    .eq('il', il)
-    .eq('ilce', ilce)
-    .eq('okul_adi', okulAdi)
-    .maybeSingle()
-
-  if (mevcut.error || !mevcut.data) hataFirlat(error, 'Okul kaydedilemedi.')
-  return mevcut.data.id
+  const yeniden = await okullariGetir(il, ilce)
+  const ikinci = yeniden.find((okul) => okulAdiAnahtar(okul.okul_adi) === anahtar)
+  if (ikinci) return ikinci.id
+  hataFirlat(error, 'Okul kaydedilemedi.')
 }
 
 export async function okullariGetir(il, ilce) {

@@ -12,6 +12,7 @@ import {
   ogrenciKaydiOlustur,
   ogretmenKaydiOlustur,
   ogretmenleriGetir,
+  okulAdiAnahtar,
   okullariGetir,
 } from '../services/kayit'
 
@@ -50,6 +51,12 @@ const siniflar = [5, 6, 7, 8, 9, 10, 11, 12]
 const iller = ilIlceListesi.map((kayit) => kayit.il)
 const ilceler = computed(() => ilIlceListesi.find((kayit) => kayit.il === seciliIl.value)?.ilceler ?? [])
 const okulSecimiGerekli = computed(() => sekme.value === 'ogrenci' && katilim.value !== 'davet')
+const ogretmenOkulu = computed(() => sekme.value === 'ogretmen')
+const ayniOkul = computed(() => {
+  const anahtar = okulAdiAnahtar(okulAdi.value)
+  if (!anahtar) return null
+  return okullar.value.find((okul) => okulAdiAnahtar(okul.okul_adi) === anahtar) || null
+})
 const ogretmenSecimiGerekli = computed(() => sekme.value === 'ogrenci' && katilim.value === 'okul')
 const kuralDurumu = computed(() => sifreKuraliDurumu(sifre.value))
 
@@ -127,7 +134,7 @@ watch(seciliOkulId, ogretmenleriYukle)
 async function okullariYukle() {
   const istekNo = ++okulIstekNo
   okullar.value = []
-  if (!okulSecimiGerekli.value || !seciliIl.value || !seciliIlce.value) {
+  if (!(okulSecimiGerekli.value || ogretmenOkulu.value) || !seciliIl.value || !seciliIlce.value) {
     okullarYukleniyor.value = false
     return
   }
@@ -337,6 +344,14 @@ async function kaydet() {
             Okul adı
             <input v-model="okulAdi" required :class="alanSinifi" />
           </label>
+          <p v-if="ayniOkul" class="text-sm text-slate-600">
+            Bu okul kayıtlı: {{ ayniOkul.okul_adi }}. Yeni okul açılmaz, bu okula bağlanırsın.
+          </p>
+          <div v-else-if="okullar.length" class="flex flex-wrap gap-2">
+            <button v-for="okul in okullar" :key="okul.id" type="button" class="rounded-full border border-slate-300 px-3 py-1 text-sm" @click="okulAdi = okul.okul_adi">
+              {{ okul.okul_adi }}
+            </button>
+          </div>
         </template>
 
         <template v-else>
