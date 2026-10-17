@@ -5,6 +5,7 @@ import { netYazi } from '../lib/dersler'
 const props = defineProps({
   kisiler: { type: Array, default: () => [] },
   benimId: { type: String, default: '' },
+  benimOkul: { type: String, default: '' },
   olcut: { type: String, default: 'soru' },
   baslik: { type: String, default: 'Sıralama' },
 })
@@ -30,6 +31,10 @@ function puan(kisi) {
   return props.olcut === 'net' ? netYazi(kisi.deger) : Number(kisi.deger || 0)
 }
 
+function okulYazi(kisi) {
+  return kisi.okul || (kisi.ogrenci_id === props.benimId ? props.benimOkul : '')
+}
+
 function madalya(sira) {
   if (Number(sira) === 1) return 'altin'
   if (Number(sira) === 2) return 'gumus'
@@ -52,7 +57,7 @@ function madalya(sira) {
         <span class="pano-avatar" :style="{ background: renk(kisi.rumuz) }">{{ harf(kisi.rumuz) }}</span>
         <span class="pano-kim">
           <strong>{{ kisi.rumuz }}</strong>
-          <small v-if="kisi.ogrenci_id === benimId">Sen</small>
+          <small v-if="okulYazi(kisi)">{{ okulYazi(kisi) }}</small>
         </span>
         <span class="pano-puan">{{ puan(kisi) }}<small>{{ ETIKET[olcut] }}</small></span>
       </li>
@@ -64,7 +69,7 @@ function madalya(sira) {
         <span class="pano-avatar" :style="{ background: renk(disarida.rumuz) }">{{ harf(disarida.rumuz) }}</span>
         <span class="pano-kim">
           <strong>{{ disarida.rumuz }}</strong>
-          <small>Senin yerin</small>
+          <small v-if="okulYazi(disarida)">{{ okulYazi(disarida) }}</small>
         </span>
         <span class="pano-puan">{{ puan(disarida) }}<small>{{ ETIKET[olcut] }}</small></span>
       </div>

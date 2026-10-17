@@ -125,16 +125,16 @@ $$;
 drop function if exists public.liderlik(text, text, text);
 
 create function public.liderlik(p_sinif text, p_il text, p_olcut text)
-returns table (ogrenci_id uuid, rumuz text, deger numeric, sira int, toplam int)
+returns table (ogrenci_id uuid, rumuz text, okul text, deger numeric, sira int, toplam int)
 language sql stable security definer set search_path = public as $$
   with aday as (
-    select o.id, o.rumuz
+    select o.id, o.rumuz, k.okul_adi
     from ogrenciler o
     join okullar k on k.id = o.okul_id
     where o.onay_durumu is true and o.sinif::text = p_sinif and k.il = p_il
   ),
   puan as (
-    select a.id, a.rumuz,
+    select a.id, a.rumuz, a.okul_adi,
       case p_olcut
         when 'kitap' then (select count(*) from kitaplar b where b.ogrenci_id = a.id)::numeric
         when 'net' then coalesce((select sum(gun_net(g)) from gunluk_kayitlar g where g.ogrenci_id = a.id and g.tarih >= date_trunc('month', current_date)::date), 0)
@@ -143,12 +143,12 @@ language sql stable security definer set search_path = public as $$
     from aday a
   ),
   sirali as (
-    select p.id, p.rumuz, p.deger,
+    select p.id, p.rumuz, p.okul_adi, p.deger,
       row_number() over (order by p.deger desc, p.rumuz)::int as sira,
       count(*) over ()::int as toplam
     from puan p
   )
-  select s.id, s.rumuz, s.deger, s.sira, s.toplam
+  select s.id, s.rumuz, s.okul_adi, s.deger, s.sira, s.toplam
   from sirali s
   where s.sira <= 10 or s.id = auth.uid()
   order by s.sira

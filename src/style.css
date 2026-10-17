@@ -1134,6 +1134,13 @@ input[type='number'] {
   font-size: 0.7rem;
 }
 
+.pano-kim small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .pano-puan {
   font-family: var(--baslik);
   font-size: 1.28rem;

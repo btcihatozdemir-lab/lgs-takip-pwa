@@ -337,7 +337,7 @@ onMounted(async () => {
         <div class="parca">
           <button v-for="olcut in [{ id: 'soru', ad: 'Soru' }, { id: 'net', ad: 'Net' }, { id: 'kitap', ad: 'Kitap' }]" :key="olcut.id" type="button" :class="{ secili: siralamaOlcut === olcut.id }" @click="olcutSec(olcut.id)">{{ olcut.ad }}</button>
         </div>
-        <Liderlik :kisiler="sira" :benim-id="kart.id" :olcut="siralamaOlcut" baslik="Sıralama" />
+        <Liderlik :kisiler="sira" :benim-id="kart.id" :benim-okul="kart.okullar?.okul_adi || ''" :olcut="siralamaOlcut" baslik="Sıralama" />
       </section>
 
       <section v-show="sekme === 'ben'">
