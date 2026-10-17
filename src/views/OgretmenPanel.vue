@@ -34,6 +34,7 @@ const bolge = ref(null)
 const dersler = ref([])
 const sira = ref([])
 const olcut = ref('soru')
+const seciliSinif = ref('')
 const adSoyad = ref('')
 const brans = ref('')
 const seciliIl = ref('')
@@ -62,6 +63,13 @@ const baglantiKisa = computed(() => {
   return `${adres.host}${adres.pathname}${adres.search}`
 })
 const dersTavan = computed(() => Math.max(1, ...dersler.value.map((ders) => Number(ders.soru) || 0)))
+const sinifSecenekleri = computed(() => {
+  const siniflar = ogrenciler.value
+    .filter((ogrenci) => ogrenci.onay_durumu)
+    .map((ogrenci) => String(ogrenci.sinif))
+    .filter(Boolean)
+  return [...new Set(siniflar)].sort((a, b) => Number(a) - Number(b))
+})
 const bekleyenler = computed(() => ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu === false))
 const onaylilar = computed(() => ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu === true && ogrenci.danisman_id === kart.value?.id))
 const danismansizlar = computed(() => ogrenciler.value.filter((ogrenci) => ogrenci.onay_durumu === true && !ogrenci.danisman_id))
@@ -140,7 +148,17 @@ async function yukle() {
   okul.value = okulSonuc
   bolge.value = bolgeSonuc
   dersler.value = dersSonuc || []
-  sira.value = (await liderlik(onaylilar.value[0]?.sinif || '8', kart.value.okullar?.il, olcut.value)) || []
+  if (!sinifSecenekleri.value.includes(seciliSinif.value)) seciliSinif.value = sinifSecenekleri.value[0] || ''
+  await sirayiGetir()
+}
+
+async function sirayiGetir() {
+  const il = kart.value?.okullar?.il
+  if (!seciliSinif.value || !il) {
+    sira.value = []
+    return
+  }
+  sira.value = (await liderlik(seciliSinif.value, il, olcut.value)) || []
 }
 
 async function kopyala() {
@@ -207,7 +225,16 @@ function cizelgeAc(ogrenciId) {
 async function olcutSec(yeni) {
   olcut.value = yeni
   try {
-    sira.value = (await liderlik(onaylilar.value[0]?.sinif || '8', kart.value.okullar?.il, olcut.value)) || []
+    await sirayiGetir()
+  } catch (hata) {
+    toast.hata(hata.message || 'Sıralama alınamadı.')
+  }
+}
+
+async function sinifSec(sinif) {
+  seciliSinif.value = sinif
+  try {
+    await sirayiGetir()
   } catch (hata) {
     toast.hata(hata.message || 'Sıralama alınamadı.')
   }
@@ -353,10 +380,14 @@ onMounted(async () => {
           <div class="bolum-baslik" style="margin-top: 1.2rem;">
             <h2>İl sırası</h2>
           </div>
+          <div v-if="sinifSecenekleri.length" class="parca">
+            <button v-for="sinif in sinifSecenekleri" :key="sinif" type="button" :class="{ secili: seciliSinif === sinif }" @click="sinifSec(sinif)">{{ sinif }}. sınıf</button>
+          </div>
           <div class="parca">
             <button v-for="secenek in [{ id: 'soru', ad: 'Soru' }, { id: 'net', ad: 'Net' }, { id: 'kitap', ad: 'Kitap' }]" :key="secenek.id" type="button" :class="{ secili: olcut === secenek.id }" @click="olcutSec(secenek.id)">{{ secenek.ad }}</button>
           </div>
-          <Liderlik :kisiler="sira" :olcut="olcut" baslik="İl sırası" />
+          <Liderlik v-if="seciliSinif" :kisiler="sira" :olcut="olcut" :baslik="`${seciliSinif}. sınıf`" />
+          <p v-else class="bos">Okulda onaylı öğrenci yok.</p>
         </div>
       </div>
 
