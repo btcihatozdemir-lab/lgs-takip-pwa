@@ -1,6 +1,7 @@
 import { supabase } from '../supabase'
 import { rumuzKontrol } from './calisma'
 import { FormTemizlemeHatasi, hataMetni } from './hata'
+import { profilGetir } from './profil'
 import { sifreDenetle } from './sifre'
 
 const EPOSTA_UYARISI = 'Hesap oluşturuldu ancak oturum açılamadı. E-posta doğrulaması açıksa önce e-postanızı onaylayın.'
@@ -48,26 +49,33 @@ function oturumHatasiFirlat(error) {
   throw new Error(hataMetni(error, 'Oturum açılamadı.'))
 }
 
-async function kullaniciyiHazirla({ kullaniciId, eposta, sifre, rol }) {
+function onayAdresi() {
+  return new URL('./', window.location.origin + import.meta.env.BASE_URL).href
+}
+
+async function kullaniciyiHazirla({ kullaniciId, eposta, sifre, rol, kayitBilgisi }) {
   if (kullaniciId) {
     try {
-      await supabase.auth.updateUser({ data: { role: rol } })
+      await supabase.auth.updateUser({ data: { role: rol, kayit: kayitBilgisi } })
     } catch {
       // Rol bilgisi profil tablosunda durur. Metadata yazılamazsa kayıt sürer.
     }
     return { id: kullaniciId }
   }
-  return oturumuHazirla(eposta, sifre, rol)
+  return oturumuHazirla(eposta, sifre, rol, kayitBilgisi)
 }
 
-async function oturumuHazirla(eposta, sifre, rol) {
+async function oturumuHazirla(eposta, sifre, rol, kayitBilgisi) {
   const sifreSorunu = sifreDenetle(sifre, eposta)
   if (sifreSorunu) throw new Error(sifreSorunu)
 
   const kayit = await supabase.auth.signUp({
     email: eposta,
     password: sifre,
-    options: { data: { role: rol } },
+    options: {
+      emailRedirectTo: onayAdresi(),
+      data: { role: rol, kayit: kayitBilgisi },
+    },
   })
 
   if (kayit.error) {
@@ -79,7 +87,13 @@ async function oturumuHazirla(eposta, sifre, rol) {
   let kullanici = kayit.data?.user ?? null
   if (!kayit.data?.session) {
     const giris = await supabase.auth.signInWithPassword({ email: eposta, password: sifre })
-    if (giris.error || !giris.data.session) oturumHatasiFirlat(giris.error)
+    if (giris.error || !giris.data.session) {
+      const metin = (giris.error?.message || '').toLowerCase()
+      if (!giris.error || metin.includes('not confirmed')) {
+        throw new FormTemizlemeHatasi('Hesap oluşturuldu. E-postandaki onay bağlantısına bas. Onaydan sonra kayıt tamamlanır.')
+      }
+      oturumHatasiFirlat(giris.error)
+    }
     kullanici = giris.data.user
   }
 
@@ -143,8 +157,59 @@ export async function davetKodundanOgretmenBul(davetKodu) {
   return data
 }
 
+export async function bekleyenKaydiTamamla(kullanici) {
+  if (!kullanici?.id) return null
+  const varOlan = await profilGetir(kullanici.id)
+  if (varOlan) return varOlan
+
+  const kayit = kullanici.user_metadata?.kayit
+  const rol = kullanici.user_metadata?.role
+  if (!kayit || (rol !== 'ogretmen' && rol !== 'ogrenci')) return null
+
+  if (rol === 'ogretmen') {
+    await ogretmenKaydiOlustur({
+      ad: kayit.ad,
+      soyad: kayit.soyad,
+      brans: kayit.brans,
+      il: kayit.il,
+      ilce: kayit.ilce,
+      okulAdi: kayit.okulAdi,
+      kullaniciId: kullanici.id,
+    })
+  } else {
+    await ogrenciKaydiOlustur({
+      ad: kayit.ad,
+      soyad: kayit.soyad,
+      rumuz: kayit.rumuz,
+      sinif: kayit.sinif,
+      okulId: kayit.okulId,
+      danismanId: kayit.danismanId,
+      onayDurumu: kayit.onayDurumu,
+      davetKodu: kayit.davetKodu,
+      kullaniciId: kullanici.id,
+    })
+  }
+
+  return profilGetir(kullanici.id)
+}
+
+export async function onayMektubunuYenidenGonder(eposta) {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: eposta.trim(),
+    options: { emailRedirectTo: onayAdresi() },
+  })
+  if (error) hataFirlat(error, 'Onay mektubu gönderilemedi.')
+}
+
 export async function ogretmenKaydiOlustur({ ad, soyad, eposta, sifre, brans, il, ilce, okulAdi, kullaniciId }) {
-  const kullanici = await kullaniciyiHazirla({ kullaniciId, eposta: eposta.trim(), sifre, rol: 'ogretmen' })
+  const kullanici = await kullaniciyiHazirla({
+    kullaniciId,
+    eposta: eposta?.trim(),
+    sifre,
+    rol: 'ogretmen',
+    kayitBilgisi: { ad, soyad, brans, il, ilce, okulAdi },
+  })
   const okulId = await okuluKaydetVeyaGetir(il, ilce, okulAdi.trim())
   let sonHata = null
 
@@ -165,9 +230,15 @@ export async function ogretmenKaydiOlustur({ ad, soyad, eposta, sifre, brans, il
   hataFirlat(sonHata, 'Öğretmen kaydı oluşturulamadı.')
 }
 
-export async function ogrenciKaydiOlustur({ ad, soyad, eposta, sifre, rumuz, sinif, okulId, danismanId, onayDurumu, kullaniciId }) {
+export async function ogrenciKaydiOlustur({ ad, soyad, eposta, sifre, rumuz, sinif, okulId, danismanId, onayDurumu, davetKodu, kullaniciId }) {
   const tekilRumuz = await rumuzKontrol(rumuz)
-  const kullanici = await kullaniciyiHazirla({ kullaniciId, eposta: eposta.trim(), sifre, rol: 'ogrenci' })
+  const kullanici = await kullaniciyiHazirla({
+    kullaniciId,
+    eposta: eposta?.trim(),
+    sifre,
+    rol: 'ogrenci',
+    kayitBilgisi: { ad, soyad, rumuz: tekilRumuz, sinif, okulId, danismanId, onayDurumu, davetKodu },
+  })
   const { error } = await supabase.from('ogrenciler').insert({
     id: kullanici.id,
     okul_id: okulId,

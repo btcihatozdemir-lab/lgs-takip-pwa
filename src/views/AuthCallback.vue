@@ -7,7 +7,7 @@ import { googleAmaciniAl, googleOturumunuAl, oturumYonlendirmeHedefi } from '../
 import { toast } from '../services/toast'
 
 const router = useRouter()
-const durum = ref('Google oturumu doğrulanıyor...')
+const durum = ref('Oturum doğrulanıyor...')
 
 onMounted(async () => {
   try {
@@ -27,8 +27,8 @@ onMounted(async () => {
 
     await router.replace(hedef.yol)
   } catch (hata) {
-    durum.value = 'Google oturumu açılamadı.'
-    toast.hata(hataMetni(hata, 'Google oturumu açılamadı.'))
+    durum.value = 'Oturum açılamadı.'
+    toast.hata(hataMetni(hata, 'Oturum açılamadı.'))
     await router.replace('/login')
   }
 })

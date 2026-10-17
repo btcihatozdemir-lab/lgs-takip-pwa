@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { hataMetni } from '../services/hata'
+import { onayMektubunuYenidenGonder } from '../services/kayit'
 import { profilGetir } from '../services/profil'
 import { toast } from '../services/toast'
 import GoogleButon from '../components/GoogleButon.vue'
@@ -13,11 +14,13 @@ const route = useRoute()
 const eposta = ref('')
 const sifre = ref('')
 const isLoading = ref(false)
+const mektupGidiyor = ref(false)
 let girisSuruyor = false
 
 const hataMetinleri = {
   onay: 'Öğretmen onayı bekleniyor',
   profil: 'Profil bilgisi alınamadı.',
+  link: 'Onay bağlantısının süresi dolmuş ya da daha önce açılmış. Aşağıdan yeni mektup isteyin.',
 }
 
 onMounted(() => {
@@ -28,6 +31,23 @@ onMounted(() => {
   delete sorgu.hata
   router.replace({ query: sorgu })
 })
+
+async function mektubuYenile() {
+  if (mektupGidiyor.value) return
+  if (!eposta.value.trim()) {
+    toast.uyari('Önce e-posta adresini yaz.')
+    return
+  }
+  mektupGidiyor.value = true
+  try {
+    await onayMektubunuYenidenGonder(eposta.value)
+    toast.basari('Yeni onay mektubu gönderildi.')
+  } catch (hata) {
+    toast.hata(hata.message || 'Onay mektubu gönderilemedi.')
+  } finally {
+    mektupGidiyor.value = false
+  }
+}
 
 async function girisYap() {
   if (girisSuruyor) return
@@ -48,6 +68,11 @@ async function girisYap() {
       return
     }
 
+    if (!profil) {
+      await router.push('/register')
+      return
+    }
+
     if (profil?.tur === 'ogrenci') {
       if (profil.onay_durumu === false) {
         await supabase.auth.signOut()
@@ -58,8 +83,7 @@ async function girisYap() {
       return
     }
 
-    await supabase.auth.signOut()
-    throw new Error('Bu hesaba ait öğretmen veya öğrenci kaydı bulunamadı.')
+    await router.push('/register')
   } catch (hata) {
     toast.hata(hata.message || 'Giriş yapılamadı.')
   } finally {
@@ -88,6 +112,9 @@ async function girisYap() {
 
       <button type="submit" class="w-full rounded-lg bg-slate-900 px-3 py-2 text-white disabled:opacity-60" :disabled="isLoading">
         {{ isLoading ? 'Giriş yapılıyor...' : 'Giriş yap' }}
+      </button>
+      <button type="button" class="w-full text-sm text-slate-600 underline disabled:opacity-60" :disabled="mektupGidiyor" @click="mektubuYenile">
+        {{ mektupGidiyor ? 'Gönderiliyor...' : 'Onay mektubunu yeniden gönder' }}
       </button>
 
       <p class="text-center text-xs text-slate-400">veya</p>

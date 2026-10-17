@@ -1,10 +1,30 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { supabase } from '../supabase'
-import { hataBildir } from '../services/hata'
+import { hataBildir, hataMetni } from '../services/hata'
+import { toast } from '../services/toast'
+import { bekleyenKaydiTamamla } from '../services/kayit'
 import { profilGetir } from '../services/profil'
 
 const routes = [
-  { path: '/', redirect: '/login' },
+  {
+    path: '/',
+    component: { template: '<p class="p-6 text-center text-sm">Yönlendiriliyor...</p>' },
+    beforeEnter: async () => {
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+      const aciklama = hash.get('error_description') || hash.get('error')
+      if (aciklama) {
+        toast.uyari(hataMetni(new Error(decodeURIComponent(aciklama.replace(/\+/g, ' ')))))
+        return { path: '/login', query: { hata: 'link' } }
+      }
+      try {
+        await supabase.auth.getSession()
+      } catch (hata) {
+        toast.uyari(hataMetni(hata, 'Onay bağlantısı açılamadı.'))
+        return { path: '/login', query: { hata: 'link' } }
+      }
+      return '/login'
+    },
+  },
   { path: '/login', component: () => import('../views/Login.vue') },
   { path: '/register', component: () => import('../views/Register.vue') },
   { path: '/auth/callback', component: () => import('../views/AuthCallback.vue') },
@@ -60,9 +80,10 @@ router.beforeEach(async (to) => {
   let profil = null
   try {
     profil = await profilGetir(session.user.id)
+    if (!profil) profil = await bekleyenKaydiTamamla(session.user)
   } catch {
-    if (to.meta.requiresAuth) return { path: '/login', query: { hata: 'profil' } }
-    return true
+    if (to.path === '/register') return true
+    return '/register'
   }
 
   if (!profil) {

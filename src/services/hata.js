@@ -16,6 +16,9 @@ export function hataMetni(hata, yedek = 'Beklenmeyen bir hata oluştu.') {
   if (kucuk.includes('email not confirmed') || kucuk.includes('not confirmed')) {
     return 'E-posta adresiniz henüz doğrulanmamış.'
   }
+  if (kucuk.includes('expired') || kucuk.includes('otp') || (kucuk.includes('invalid') && kucuk.includes('link'))) {
+    return 'Onay bağlantısının süresi dolmuş ya da daha önce açılmış. Giriş sayfasından yeni mektup isteyin.'
+  }
   if (kucuk.includes('failed to fetch') || kucuk.includes('network')) {
     return 'Bağlantı kurulamadı. İnternetinizi kontrol edin.'
   }

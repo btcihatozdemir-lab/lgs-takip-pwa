@@ -285,7 +285,7 @@ async function kaydet() {
         <p class="text-center text-xs text-slate-400">veya e-posta ile</p>
       </div>
       <div v-else class="mt-4 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
-        <span>Google hesabı bağlandı.</span>
+        <span>{{ googleOturumu.app_metadata?.provider === 'google' ? 'Google hesabı bağlandı.' : 'E-posta onaylandı. Formu doldurup kaydı tamamla.' }}</span>
         <button type="button" class="font-medium underline" @click="googleCikis">Çıkış</button>
       </div>
 

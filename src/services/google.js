@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { bekleyenKaydiTamamla } from './kayit'
 import { hataMetni } from './hata'
 import { profilGetir } from './profil'
 
@@ -52,7 +53,8 @@ export function googleAmaciniAl() {
 export async function oturumYonlendirmeHedefi(oturum) {
   if (!oturum?.user) return { yol: '/login' }
 
-  const profil = await profilGetir(oturum.user.id)
+  let profil = await profilGetir(oturum.user.id)
+  if (!profil) profil = await bekleyenKaydiTamamla(oturum.user)
   if (!profil) return { yol: '/register', profilYok: true }
   if (profil.tur === 'ogrenci' && profil.onay_durumu === false) return { yol: '/login', hata: 'onay' }
   return { yol: profil.tur === 'ogretmen' ? '/ogretmen' : '/ogrenci' }
