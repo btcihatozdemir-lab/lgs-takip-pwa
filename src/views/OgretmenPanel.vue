@@ -79,8 +79,13 @@ const danismanSiniflari = computed(() => {
   const siniflar = onaylilar.value.map((ogrenci) => Number(ogrenci.sinif)).filter((sinif) => sinif >= 1)
   return [...new Set(siniflar)].sort((a, b) => a - b)
 })
+function yerAdi(metin) {
+  const yazi = String(metin || '').toLocaleLowerCase('tr-TR')
+  return yazi.charAt(0).toLocaleUpperCase('tr-TR') + yazi.slice(1)
+}
+
 const siraBaslik = computed(() => {
-  const il = kart.value?.okullar?.il || 'İl'
+  const il = yerAdi(kart.value?.okullar?.il || 'İl')
   if (siraSekme.value === 'genel') return `${il} · ${kademe.value.ad} · bu hafta`
   return `${il} · ${seciliSinif.value}. sınıf · bu hafta`
 })
@@ -518,8 +523,11 @@ onMounted(async () => {
             </article>
           </div>
 
-          <div class="bolum-baslik" style="margin-top: 1.2rem;">
-            <h2>İl sırası</h2>
+          <div class="bolum-baslik lider-baslik" style="margin-top: 1.2rem;">
+            <h2>
+              <span class="ozet-simge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3"/></svg></span>
+              Liderler
+            </h2>
           </div>
           <div class="sira-sekme">
             <button type="button" :class="{ secili: siraSekme === 'ogrencilerim' }" @click="siraSekmesi('ogrencilerim')">Öğrencilerim</button>

@@ -332,6 +332,12 @@ input[type='number'] {
   letter-spacing: -0.03em;
 }
 
+.lider-baslik h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .hafta-cubuk {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -1364,7 +1370,7 @@ input[type='number'] {
   border-radius: 999px;
   background: var(--kagit);
   font-family: var(--baslik);
-  font-size: 1.2rem;
+  font-size: 0.95rem;
   font-weight: 550;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -1387,22 +1393,22 @@ input[type='number'] {
 
 .pano-satir {
   display: grid;
-  grid-template-columns: 2.2rem 2.35rem minmax(0, 1fr) auto;
-  gap: 0.55rem;
+  grid-template-columns: 1.7rem minmax(0, 1fr) auto;
+  gap: 0.4rem;
   align-items: center;
-  padding: 0.48rem 0.55rem;
-  border-radius: 0.9rem;
+  padding: 0.38rem 0.45rem;
+  border-radius: 0.8rem;
   background: #f6f1e7;
 }
 
 .madalya,
 .sira-duz {
   display: grid;
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 1.7rem;
+  height: 1.7rem;
   place-items: center;
   font-family: var(--baslik);
-  font-size: 1.05rem;
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
@@ -1418,18 +1424,7 @@ input[type='number'] {
 
 .sira-duz {
   color: var(--soluk);
-  font-size: 1.15rem;
-}
-
-.pano-avatar {
-  display: grid;
-  width: 2.35rem;
-  height: 2.35rem;
-  place-items: center;
-  border-radius: 0.7rem;
-  color: #f7f4ec;
-  font-family: var(--baslik);
-  font-size: 1.15rem;
+  font-size: 0.9rem;
 }
 
 .pano-kim {
@@ -1439,6 +1434,7 @@ input[type='number'] {
 .pano-kim strong {
   display: block;
   overflow: hidden;
+  font-size: 0.84rem;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1459,7 +1455,7 @@ input[type='number'] {
 
 .pano-puan {
   font-family: var(--baslik);
-  font-size: 1.28rem;
+  font-size: 1.02rem;
   font-weight: 550;
   line-height: 1;
   text-align: right;

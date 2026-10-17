@@ -13,7 +13,6 @@ const props = defineProps({
 })
 
 const ETIKET = { soru: 'Soru', net: 'Net', kitap: 'Kitap' }
-const RENKLER = ['#8d4b32', '#1e4d3a', '#21596f', '#6d5424', '#5a4874', '#3c5c49']
 
 const ilkOn = computed(() => props.kisiler.filter((kisi) => kisi.sira == null || Number(kisi.sira) <= 10).slice(0, 10))
 const toplam = computed(() => Number(props.kisiler[0]?.toplam || 0))
@@ -33,15 +32,6 @@ function gorunenAd(kisi) {
   if (!props.adGoster) return kisi.rumuz
   const ad = kisi.ad_soyad || kisi.rumuz || ''
   return kisi.sinif ? `${ad}(${kisi.sinif})` : ad
-}
-
-function harf(ad) {
-  return (ad || '?').trim().charAt(0).toLocaleUpperCase('tr-TR')
-}
-
-function renk(ad) {
-  const toplamKod = [...(ad || '?')].reduce((sayi, karakter) => sayi + karakter.charCodeAt(0), 0)
-  return RENKLER[toplamKod % RENKLER.length]
 }
 
 function puan(kisi) {
@@ -72,7 +62,6 @@ function madalya(sira) {
       <li v-for="kisi in ilkOn" :key="kisi.ogrenci_id" class="pano-satir" :class="{ 'benim-ic': kisi.benim || kisi.ogrenci_id === benimId }">
         <span v-if="madalya(kisi.sira)" class="madalya" :class="madalya(kisi.sira)">{{ kisi.sira }}</span>
         <span v-else class="sira-duz">{{ kisi.sira }}</span>
-        <span class="pano-avatar" :style="{ background: renk(gorunenAd(kisi)) }">{{ harf(gorunenAd(kisi)) }}</span>
         <span class="pano-kim">
           <strong>{{ gorunenAd(kisi) }}</strong>
           <small v-if="okulYazi(kisi)">{{ okulYazi(kisi) }}</small>
@@ -84,7 +73,6 @@ function madalya(sira) {
       <p v-if="!disariListe">İlk 10'un dışındasın</p>
       <div v-for="kisi in disaridakiler" :key="kisi.ogrenci_id" class="pano-satir disarida">
         <span class="sira-duz">{{ kisi.sira }}</span>
-        <span class="pano-avatar" :style="{ background: renk(gorunenAd(kisi)) }">{{ harf(gorunenAd(kisi)) }}</span>
         <span class="pano-kim">
           <strong>{{ gorunenAd(kisi) }}</strong>
           <small v-if="okulYazi(kisi)">{{ okulYazi(kisi) }}</small>
