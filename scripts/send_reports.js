@@ -12,6 +12,13 @@ import { gecenHafta, raporHazirla } from '../supabase/functions/haftalik-posta/r
 
 const execFileAsync = promisify(execFile)
 
+class BosSoket {
+  close() {}
+  send() {}
+  addEventListener() {}
+  removeEventListener() {}
+}
+
 function gerekli(ad) {
   const deger = process.env[ad]
   if (!deger) throw new Error(`${ad} tanımlı değil. GitHub Secrets içine ekleyin.`)
@@ -112,6 +119,7 @@ export async function cetvelEkleri(raporlar, yazitipleri, hafta) {
 async function calistir() {
   const supabase = createClient(gerekli('SUPABASE_URL'), gerekli('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false },
+    realtime: { transport: BosSoket },
   })
   const hafta = gecenHafta()
   const yalnizEposta = (process.env.TEST_OGRENCI_EPOSTA || '').trim().toLowerCase()
