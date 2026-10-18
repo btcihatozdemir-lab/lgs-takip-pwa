@@ -8,9 +8,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
-    <title>LGS Günlük Takip</title>
+    <title>Rota - Sınav Takip</title>
+    <meta http-equiv="refresh" content="0; url=https://rota.okulotomasyon.com/">
+    <link rel="canonical" href="https://rota.okulotomasyon.com/">
+    <script>
+      var yol = location.pathname.replace(/^\/lgs-takip-pwa\/?/, '')
+      location.replace('https://rota.okulotomasyon.com/' + yol + location.search + location.hash)
+    </script>
   </head>
   <body>
+    <p>Rota - Sınav Takip adresine gidiliyor.</p>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
