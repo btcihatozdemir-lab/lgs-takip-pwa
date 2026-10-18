@@ -185,11 +185,11 @@ async function calistir() {
 
   const yazitipleri = await yazitipleriYukle()
   const tasima = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: 'srvm14.trwww.com',
     port: 465,
     secure: true,
     auth: {
-      user: gerekli('SMTP_USER'),
+      user: 'rota@okulotomasyon.com',
       pass: gerekli('SMTP_PASS'),
     },
   })
@@ -225,7 +225,7 @@ async function calistir() {
       })).sort((a, b) => a.adSoyad.localeCompare(b.adSoyad, 'tr'))
 
       await tasima.sendMail({
-        from: `"LGS Takip" <${process.env.SMTP_USER}>`,
+        from: '"Rota - Sınav Takip" <rota@okulotomasyon.com>',
         to: posta,
         subject: `${yalnizEposta ? 'Deneme · ' : ''}Haftalık çizelge · ${hafta.baslangic} – ${hafta.bitis}`,
         html: htmlRapor(ogretmen.ad_soyad, raporlar, hafta),
