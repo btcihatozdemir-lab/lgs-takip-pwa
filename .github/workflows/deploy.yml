@@ -38,8 +38,11 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
-      - name: SPA fallback
-        run: cp dist/index.html dist/404.html
+      - name: Eski adresleri Rota'ya yönlendir
+        run: |
+          cp pages/index.html dist/index.html
+          cp pages/index.html dist/404.html
+          cp pages/sw.js dist/sw.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
