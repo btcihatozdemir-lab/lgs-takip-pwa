@@ -1,8 +1,6 @@
 name: Haftalık rapor
 
 on:
-  schedule:
-    - cron: '0 5 * * 1'
   workflow_dispatch:
     inputs:
       ogrenci_eposta:
